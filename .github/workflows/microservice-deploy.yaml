@@ -1,0 +1,94 @@
+name: microservice deploy
+on:
+  workflow_dispatch:
+    inputs:
+      microservice:
+        description: "Microservice to deploy"
+        required: true
+        type: choice
+        options:
+          - address-service
+          - bcsc-service
+          - captcha-service
+          - msp-service
+          - spa-env-server
+          - splunk-forwarder
+      license-plate:
+        description: Which OpenShift project are you deploying to?
+        required: true
+        type: choice
+        options:
+          - a3c641
+          - e1aae2
+          - f0463d
+          - 0752cb
+          - 3f9283
+          - 61ab99
+          - ee3ae3
+      environment:
+        description: "Environment to deploy to"
+        required: true
+        type: choice
+        options:
+          - dev
+          - test
+          - prod
+defaults:
+  run:
+    working-directory: ./
+env:
+  LICENSE_PLATE: ${{ github.event.inputs.license-plate }}
+  NAMESPACE: ${{ github.event.inputs.license-plate }}-tools
+  IMAGE_NAME: ${{ github.event.inputs.microservice }}
+  #The SOURCE_IMAGE_TAG uses a ternary operator chain to programmatically determine what the source image should be
+  #When github.events.inputs.environment matches the string provided (eg. 'dev'), the string next to the && is used as the source image (eg. 'latest'). Otherwise it moves to the next || clause.
+  #Dev's source image should always be latest. Test's source image should always be dev. Prod's source image should always be test.
+  SOURCE_IMAGE_TAG: ${{ github.event.inputs.environment == 'dev' && 'latest' || github.event.inputs.environment == 'test' && 'dev' || github.event.inputs.environment == 'prod' && 'test' }}
+  TARGET_IMAGE_TAG: ${{ github.event.inputs.environment }}
+jobs:
+  validate:
+    name: Validate microservice/namespace combination
+    runs-on: ubuntu-latest
+    outputs:
+      good_to_go: ${{ steps.set_output.outputs.checks_valid }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 2
+      - name: git diff and set output
+        id: set_output
+        run: |
+          if [[ -z ${{ github.event.inputs.microservice }} ]]; then
+            echo "::set-output name=checks_valid::false"
+            echo "Deployment skipped because microservice not set"
+          elif [[ -z ${{ github.event.inputs.license-plate }} ]]; then
+            echo "::set-output name=checks_valid::false"
+            echo "Deployment skipped because license plate not set"
+          elif [[ -z ${{ github.event.inputs.environment }} ]]; then
+            echo "::set-output name=checks_valid::false"
+            echo "Deployment skipped because environment not set"
+          elif [[ ( $IMAGE_NAME == "bcsc-service") && ( $LICENSE_PLATE != "a3c641") ]]; then
+            echo "::set-output name=checks_valid::false"
+            echo "Deployment skipped because BCSC service is only used in a3c641"
+          elif [[ ( $IMAGE_NAME == "msp-service") && ( $LICENSE_PLATE == "3f9283") ]]; then
+            echo "::set-output name=checks_valid::false"
+            echo "Deployment skipped because 3f9283 uses a custom msp-service. See the project repo for details"
+          else
+            echo "::set-output name=checks_valid::true"
+          fi
+  deploy:
+    needs: [validate]
+    if: needs.validate.outputs.good_to_go == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: redhat-actions/openshift-tools-installer@v1
+        with:
+          source: "mirror"
+          oc: "latest"
+      - name: Log in to Openshift
+        run: oc login --token=${{ secrets.OpenShiftToken }} --server=${{ secrets.OpenShiftServerURL}}
+      - name: Deploy to Target Environment
+        #see OpenShift/RedHat documentation for more info on "oc tag" syntax
+        #example: `oc tag f0463d-dev/address-service:latest f0463d-dev/address-service:dev
+        run: oc tag ${NAMESPACE}/${IMAGE_NAME}:${SOURCE_IMAGE_TAG} ${NAMESPACE}/${IMAGE_NAME}:${TARGET_IMAGE_TAG}

@@ -1,0 +1,96 @@
+name: splunk-forwarder build
+on:
+  push:
+    paths:
+      - "splunk-forwarder/src/**/*.js"
+      - "splunk-forwarder/package*.json"
+  workflow_dispatch:
+    inputs:
+      license-plate:
+        description: Which OpenShift project are you building for?
+        type: choice
+        options:
+          - a3c641
+          - e1aae2
+          - f0463d
+          - 0752cb
+          - 3f9283
+          - 61ab99
+          - ee3ae3
+      force-image-build:
+        description: "The default behavior of this workflow is to only build a new image when a branch is pushed to main. To override this and build anyway, change this to true."
+        required: false
+        default: false
+        type: boolean
+
+env:
+  NAMESPACE: ${{ github.event.inputs.license-plate }}-tools
+  BUILD_NAME: splunk-forwarder-main-build
+  IMAGE_NAME: splunk-forwarder
+  SOURCE_IMAGE_TAG: latest
+  TARGET_IMAGE_TAG: dev
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./splunk-forwarder
+    steps:
+      - uses: actions/checkout@main
+      - uses: actions/setup-node@main
+        with:
+          node-version: "18"
+      - name: Install dependencies
+        run: npm ci
+      - name: Unit tests
+        run: npm run test
+      - name: LINTing
+        run: npm run test:lint
+
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./splunk-forwarder
+    needs: [test]
+    strategy:
+      matrix:
+        node-version: [18.x]
+    steps:
+      - uses: actions/checkout@v1
+      - uses: actions/setup-node@v1
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: Cache node modules
+        uses: actions/cache@v1
+        with:
+          path: node_modules
+          key: ${{ runner.OS }}-build-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.OS }}-build-${{ env.cache-name }}-
+            ${{ runner.OS }}-build-
+            ${{ runner.OS }}-
+      - name: npm install and build
+        run: |
+          npm ci
+          npm run build --if-present
+        env:
+          CI: "true"
+  image-build:
+    if: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event.inputs.force-image-build == 'true'}}
+    runs-on: ubuntu-latest
+    needs: [test, build]
+    steps:
+      - uses: redhat-actions/openshift-tools-installer@v1
+        with:
+          source: "mirror"
+          oc: "latest"
+      - name: Log in to Openshift
+        run: oc login --token=${{ secrets.OpenShiftToken }} --server=${{ secrets.OpenShiftServerURL}}
+      - name: Generate Image Build
+        run: oc start-build ${BUILD_NAME} -n ${NAMESPACE} --follow
+      - name: Time delay
+        # to give time for Openshift to process the build so it doesn't tag the wrong image
+        run: sleep 20s
+      - name: Tag Image Build
+        run: oc tag -n ${NAMESPACE} ${NAMESPACE}/${IMAGE_NAME}:${SOURCE_IMAGE_TAG} ${NAMESPACE}/${IMAGE_NAME}:${TARGET_IMAGE_TAG}
