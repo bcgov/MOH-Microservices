@@ -24,7 +24,7 @@ on:
           - 0752cb
           - 3f9283
           - 61ab99
-          - ee3ae3
+          - be8465
       environment:
         description: "Environment to deploy to"
         required: true
