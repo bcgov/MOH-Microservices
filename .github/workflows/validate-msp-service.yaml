@@ -1,11 +1,9 @@
 name: validate msp-service
 on:
   push:
-    branches:
-      - "*"
-    # paths:
-    #   - "msp-service/src/**/*.js"
-    #   - "msp-service/package*.json"
+    paths:
+      - "msp-service/src/**/*.js"
+      - "msp-service/package*.json"
   workflow_dispatch:
 
 defaults:
