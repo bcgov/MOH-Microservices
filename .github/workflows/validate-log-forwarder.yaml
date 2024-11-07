@@ -1,0 +1,32 @@
+name: validate log-forwarder
+on:
+  push:
+    branches:
+      - "*"
+    # paths:
+    #   - "splunk-forwarder/src/**/*.js"
+    #   - "splunk-forwarder/package*.json"
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: ./splunk-forwarder
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@main
+      - uses: actions/setup-node@main
+        with:
+          node-version: "12"
+      - name: Install dependencies
+        run: npm ci
+      - name: Unit tests
+        run: npm run test:coverage
+      - name: LINTing
+        run: npm run test:lint
+      # - name: OpenAPI Schema
+      #   run: npm run test:schema
+      - name: Build step
+        run: npm run build
