@@ -1,11 +1,9 @@
 name: validate bcsc-service
 on:
   push:
-    branches:
-      - "*"
-    # paths:
-    #   - "bcsc-service/src/**/*.js"
-    #   - "bcsc-service/package*.json"
+    paths:
+      - "bcsc-service/src/**/*.js"
+      - "bcsc-service/package*.json"
   workflow_dispatch:
 
 defaults:
