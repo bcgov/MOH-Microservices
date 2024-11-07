@@ -1,11 +1,9 @@
 name: validate address-service
 on:
   push:
-    branches:
-      - "*"
-    # paths:
-    #   - "address-service/src/**/*.js"
-    #   - "address-service/package*.json"
+    paths:
+      - "address-service/src/**/*.js"
+      - "address-service/package*.json"
   workflow_dispatch:
 
 defaults:
