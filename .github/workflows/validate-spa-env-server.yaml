@@ -1,11 +1,9 @@
 name: validate spa-env-server
 on:
   push:
-    branches:
-      - "*"
-    # paths:
-    #   - "spa-env-server/src/**/*.js"
-    #   - "spa-env-server/package*.json"
+    paths:
+      - "spa-env-server/src/**/*.js"
+      - "spa-env-server/package*.json"
   workflow_dispatch: 
 
 defaults:
