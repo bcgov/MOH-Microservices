@@ -1,11 +1,9 @@
 name: validate log-forwarder
 on:
   push:
-    branches:
-      - "*"
-    # paths:
-    #   - "splunk-forwarder/src/**/*.js"
-    #   - "splunk-forwarder/package*.json"
+    paths:
+      - "splunk-forwarder/src/**/*.js"
+      - "splunk-forwarder/package*.json"
   workflow_dispatch:
 
 defaults:
