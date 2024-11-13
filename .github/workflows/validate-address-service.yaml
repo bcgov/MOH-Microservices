@@ -1,0 +1,31 @@
+name: validate address-service
+on:
+  push:
+    paths:
+      - "address-service/src/**/*.js"
+      - "address-service/package*.json"
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: ./address-service
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@main
+      - uses: actions/setup-node@main
+        with:
+          node-version: "12"
+      - name: Install dependencies
+        run: npm ci
+      - name: Unit tests w/ coverage
+        run: npm run test:coverage
+      - name: LINTing
+        run: npm run test:lint
+      # - name: OpenAPI Schema
+      #   run: npm run test:schema
+      - name: Build step
+        run: npm run build
