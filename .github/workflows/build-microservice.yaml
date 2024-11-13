@@ -47,7 +47,7 @@ env:
   BUILD_NAME: ${{ github.event.inputs.microservice }}-main-build
   SOURCE_IMAGE_TAG: "latest"
   TARGET_IMAGE_TAG: "dev"
-  WORKING_DIRECTORY: ./${{ github.event.inputs.microservice }}
+  # WORKING_DIRECTORY: ./${{ github.event.inputs.microservice }}
 
 jobs:
   validate:
@@ -78,46 +78,28 @@ jobs:
           else
             echo "::set-output name=checks_valid::true"
           fi
-  build:
-    needs: [validate]
-    if: needs.validate.outputs.good_to_go == 'true'
-    runs-on: ubuntu-latest    
-    defaults:
-      run:
-        working-directory: ${WORKING_DIRECTORY}
-    steps:
-      - uses: redhat-actions/openshift-tools-installer@v1
-        with:
-          source: "mirror"
-          oc: "latest"
-      - name: Log in to Openshift
-        run: oc login --token=${{ secrets[format('OS-{0}-Token', github.event.inputs.license-plate)] }} --server=${{ secrets.OpenShiftServerURL}}
-      - name: Check version
-        run: oc version
-      - name: Generate Build
-        run: oc start-build ${BUILD_NAME} -n ${NAMESPACE} --follow
-      - name: Time delay
-        # to give time for Openshift to process the build so it doesn't tag the wrong image
-        run: sleep 30s      
-      - name: Deploy to Target Environment
-        run: oc tag ${NAMESPACE}/${IMAGE_NAME}:${SOURCE_IMAGE_TAG} ${NAMESPACE}/${IMAGE_NAME}:${TARGET_IMAGE_TAG}
-        #see OpenShift/RedHat documentation for more info on "oc tag" syntax
-        #example: `oc tag f0463d-dev/address-service:latest f0463d-dev/address-service:dev
   deploy:
     needs: [validate]
-    # if: ${{ needs.validate.outputs.good_to_go == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    if: needs.validate.outputs.good_to_go == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Test action
         run: echo "test action reached. License plate $LICENSE_PLATE Namespace $NAMESPACE Image name $IMAGE_NAME"
 
-    #   - uses: redhat-actions/openshift-tools-installer@v1
-    #     with:
-    #       source: "mirror"
-    #       oc: "latest"
-    #   - name: Log in to Openshift
-    #     run: oc login --token=${{ secrets[format('OS-{0}-Token', github.event.inputs.license-plate)] }} --server=${{ secrets.OpenShiftServerURL}}
-    #   - name: Deploy to Target Environment
-    #     run: oc tag ${NAMESPACE}/${IMAGE_NAME}:${SOURCE_IMAGE_TAG} ${NAMESPACE}/${IMAGE_NAME}:${TARGET_IMAGE_TAG}
-    #     #see OpenShift/RedHat documentation for more info on "oc tag" syntax
-    #     #example: `oc tag f0463d-dev/address-service:latest f0463d-dev/address-service:dev
+      # - uses: redhat-actions/openshift-tools-installer@v1
+      #   with:
+      #     source: "mirror"
+      #     oc: "latest"
+      # - name: Log in to Openshift
+      #   run: oc login --token=${{ secrets[format('OS-{0}-Token', github.event.inputs.license-plate)] }} --server=${{ secrets.OpenShiftServerURL}}
+      # - name: Check version
+      #   run: oc version
+      # - name: Generate Build
+      #   run: oc start-build ${BUILD_NAME} -n ${NAMESPACE} --follow
+      # - name: Time delay
+      #   # to give time for Openshift to process the build so it doesn't tag the wrong image
+      #   run: sleep 30s   
+      # - name: Deploy to Target Environment
+      #   run: oc tag ${NAMESPACE}/${IMAGE_NAME}:${SOURCE_IMAGE_TAG} ${NAMESPACE}/${IMAGE_NAME}:${TARGET_IMAGE_TAG}
+        #see OpenShift/RedHat documentation for more info on "oc tag" syntax
+        #example: `oc tag f0463d-dev/address-service:latest f0463d-dev/address-service:dev
