@@ -1,0 +1,30 @@
+name: validate captcha-service
+on:
+  push:
+    branches:
+      - "*"
+    # paths:
+    #   - "captcha-service/src/**/*.js"
+    #   - "captcha-service/package*.json"
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: ./captcha-service
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@main
+      - uses: actions/setup-node@main
+        with:
+          node-version: "10"
+      - name: Install dependencies
+        run: npm i
+      - name: Unit tests w/ coverage
+        run: npm run test:coverage
+      # - name: OpenAPI Schema
+      # run: npm run test:schema
+      - name: Build step
+        run: npm run build
