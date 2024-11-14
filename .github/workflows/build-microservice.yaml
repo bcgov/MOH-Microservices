@@ -76,7 +76,7 @@ jobs:
             echo "::set-output name=checks_valid::false"
             echo "Deployment skipped because 3f9283 uses a custom msp-service. See the project repo for details"
           else
-            echo "::set-output name=checks_valid::true"
+            echo "checks_valid=true" >> "$GITHUB_OUTPUT"
             echo "License plate/microservice combination is valid, moving to next step"
           fi
   deploy:
