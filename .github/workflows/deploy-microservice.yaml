@@ -50,10 +50,10 @@ env:
   #When github.events.inputs.environment matches the string provided (eg. 'dev'), the string next to the && is used as the source image (eg. 'latest'). Otherwise it moves to the next || clause.
   #Dev's source image should always be latest. Test's source image should always be dev. Prod's source image should always be test.
   SOURCE_IMAGE_TAG: ${{ github.event.inputs.environment == 'test' && 'dev' || github.event.inputs.environment == 'prod' && 'test' }}
-  
+
   # SOURCE_IMAGE_TAG: ${{ github.event.inputs.environment == 'dev' && 'latest' || github.event.inputs.environment == 'test' && 'dev' || github.event.inputs.environment == 'prod' && 'test' }}
-#   SOURCE_IMAGE_TAG: ${{ fromJson('{"Development": "dev", "Production": "prod" }')[github.event.inputs.environment] }}
-#   SOURCE_IMAGE_TAG: ${{ fromJson('{Development: "dev", Production: "prod" }')[0] }}
+  #   SOURCE_IMAGE_TAG: ${{ fromJson('{"Development": "dev", "Production": "prod" }')[github.event.inputs.environment] }}
+  #   SOURCE_IMAGE_TAG: ${{ fromJson('{Development: "dev", Production: "prod" }')[0] }}
   TARGET_IMAGE_TAG: ${{ github.event.inputs.environment }}
 
 jobs:
@@ -94,17 +94,17 @@ jobs:
     if: needs.validate.outputs.good_to_go == 'true'
     runs-on: ubuntu-latest
     steps:
-        - name: Test action
-          run: echo "test action reached. License plate $LICENSE_PLATE Namespace $NAMESPACE Image name $IMAGE_NAME Source ${SOURCE_IMAGE_TAG} Target ${TARGET_IMAGE_TAG}"
-        - uses: redhat-actions/openshift-tools-installer@v1
-          with:
-            source: "mirror"
-            oc: "latest"
-        - name: Log in to Openshift
-          run: oc login --token=${{ secrets[format('OS_{0}_Token', github.event.inputs.license-plate)] }} --server=${{ secrets.OpenShiftServerURL}}
-        - name: Check version
-          run: oc version
-    #   - name: Deploy to Target Environment
-    #     run: oc tag ${NAMESPACE}/${IMAGE_NAME}:${SOURCE_IMAGE_TAG} ${NAMESPACE}/${IMAGE_NAME}:${TARGET_IMAGE_TAG}
-    #     #see OpenShift/RedHat documentation for more info on "oc tag" syntax
-    #     #example: `oc tag f0463d-dev/address-service:latest f0463d-dev/address-service:dev
+      - name: Test action
+        run: echo "test action reached. License plate $LICENSE_PLATE Namespace $NAMESPACE Image name $IMAGE_NAME Source ${SOURCE_IMAGE_TAG} Target ${TARGET_IMAGE_TAG}"
+      - uses: redhat-actions/openshift-tools-installer@v1
+        with:
+          source: "mirror"
+          oc: "latest"
+      - name: Log in to Openshift
+        run: oc login --token=${{ secrets[format('OS_{0}_Token', github.event.inputs.license-plate)] }} --server=${{ secrets.OpenShiftServerURL}}
+      - name: Check version
+        run: oc version
+      - name: Deploy to Target Environment
+        run: oc tag ${NAMESPACE}/${IMAGE_NAME}:${SOURCE_IMAGE_TAG} ${NAMESPACE}/${IMAGE_NAME}:${TARGET_IMAGE_TAG}
+        # see OpenShift/RedHat documentation for more info on "oc tag" syntax
+        # example: `oc tag f0463d-dev/address-service:latest f0463d-dev/address-service:dev

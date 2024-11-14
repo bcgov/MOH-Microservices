@@ -95,12 +95,12 @@ jobs:
         run: oc login --token=${{ secrets[format('OS_{0}_Token', github.event.inputs.license-plate)] }} --server=${{ secrets.OpenShiftServerURL}}
       - name: Check version
         run: oc version
-      # - name: Generate Build
-      #   run: oc start-build ${BUILD_NAME} -n ${NAMESPACE} --follow
-      # - name: Time delay
-      #   # to give time for Openshift to process the build so it doesn't tag the wrong image
-      #   run: sleep 30s   
-      # - name: Deploy to Target Environment
-      #   run: oc tag ${NAMESPACE}/${IMAGE_NAME}:${SOURCE_IMAGE_TAG} ${NAMESPACE}/${IMAGE_NAME}:${TARGET_IMAGE_TAG}
-        #see OpenShift/RedHat documentation for more info on "oc tag" syntax
-        #example: `oc tag f0463d-dev/address-service:latest f0463d-dev/address-service:dev
+      - name: Generate Build
+        run: oc start-build ${BUILD_NAME} -n ${NAMESPACE} --follow
+      - name: Time delay
+        # to give time for Openshift to process the build so it doesn't tag the wrong image
+        run: sleep 30s
+      - name: Deploy to Target Environment
+        run: oc tag ${NAMESPACE}/${IMAGE_NAME}:${SOURCE_IMAGE_TAG} ${NAMESPACE}/${IMAGE_NAME}:${TARGET_IMAGE_TAG}
+        # see OpenShift/RedHat documentation for more info on "oc tag" syntax
+        # example: `oc tag f0463d-dev/address-service:latest f0463d-dev/address-service:dev
