@@ -24,13 +24,13 @@ on:
         required: true
         type: choice
         options:
-          - a3c641
-          - e1aae2
-          - f0463d
           - 0752cb
           - 3f9283
           - 61ab99
+          - a3c641
           - be8465
+          - e1aae2
+          - f0463d
       environment:
         description: "Environment to deploy to"
         required: true

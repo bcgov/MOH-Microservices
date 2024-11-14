@@ -24,13 +24,13 @@ on:
         required: true
         type: choice
         options:
-          - a3c641
-          - e1aae2
-          - f0463d
           - 0752cb
           - 3f9283
           - 61ab99
+          - a3c641
           - be8465
+          - e1aae2
+          - f0463d
     #   environment:
     #     description: "Environment to deploy to"
     #     required: true
@@ -79,7 +79,7 @@ jobs:
             echo "checks_valid=true" >> "$GITHUB_OUTPUT"
             echo "License plate/microservice combination is valid, moving to next step"
           fi
-  deploy:
+  build:
     needs: [validate]
     if: needs.validate.outputs.good_to_go == 'true'
     runs-on: ubuntu-latest
