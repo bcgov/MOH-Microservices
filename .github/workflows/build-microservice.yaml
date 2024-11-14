@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       microservice:
-        description: "Microservice to build"
+        description: "Microservice"
         required: true
         type: choice
         options:
@@ -87,14 +87,14 @@ jobs:
       - name: Test action
         run: echo "test action reached. License plate $LICENSE_PLATE Namespace $NAMESPACE Image name $IMAGE_NAME"
 
-      # - uses: redhat-actions/openshift-tools-installer@v1
-      #   with:
-      #     source: "mirror"
-      #     oc: "latest"
-      # - name: Log in to Openshift
-      #   run: oc login --token=${{ secrets[format('OS-{0}-Token', github.event.inputs.license-plate)] }} --server=${{ secrets.OpenShiftServerURL}}
-      # - name: Check version
-      #   run: oc version
+      - uses: redhat-actions/openshift-tools-installer@v1
+        with:
+          source: "mirror"
+          oc: "latest"
+      - name: Log in to Openshift
+        run: oc login --token=${{ secrets[format('OS_{0}_Token', github.event.inputs.license-plate)] }} --server=${{ secrets.OpenShiftServerURL}}
+      - name: Check version
+        run: oc version
       # - name: Generate Build
       #   run: oc start-build ${BUILD_NAME} -n ${NAMESPACE} --follow
       # - name: Time delay
