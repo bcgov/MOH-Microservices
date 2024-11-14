@@ -71,22 +71,22 @@ jobs:
         id: set_output
         run: |
           if [[ -z ${{ github.event.inputs.microservice }} ]]; then
-            echo "::set-output name=checks_valid::false"
+            echo "checks_valid=false" >> "$GITHUB_OUTPUT"
             echo "Deployment skipped because microservice not set"
           elif [[ -z ${{ github.event.inputs.license-plate }} ]]; then
-            echo "::set-output name=checks_valid::false"
+            echo "checks_valid=false" >> "$GITHUB_OUTPUT"
             echo "Deployment skipped because license plate not set"
           elif [[ -z ${{ github.event.inputs.environment }} ]]; then
-            echo "::set-output name=checks_valid::false"
+            echo "checks_valid=false" >> "$GITHUB_OUTPUT"
             echo "Deployment skipped because environment not set"
           elif [[ ( $IMAGE_NAME == "bcsc-service") && ( $LICENSE_PLATE != "a3c641") ]]; then
-            echo "::set-output name=checks_valid::false"
+            echo "checks_valid=false" >> "$GITHUB_OUTPUT"
             echo "Deployment skipped because BCSC service is only used in a3c641. Selected license-plate: $LICENSE_PLATE"
           elif [[ ( $IMAGE_NAME == "msp-service") && ( $LICENSE_PLATE == "3f9283") ]]; then
-            echo "::set-output name=checks_valid::false"
+            echo "checks_valid=false" >> "$GITHUB_OUTPUT"
             echo "Deployment skipped because 3f9283 uses a custom msp-service. See the project repo for details"
           else
-            echo "::set-output name=checks_valid::true"
+            echo "checks_valid=true" >> "$GITHUB_OUTPUT"
             echo "License plate/microservice combination is valid, moving to next step"
           fi
   deploy:
