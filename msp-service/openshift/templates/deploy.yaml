@@ -42,50 +42,40 @@ objects:
     kind: Service
     metadata:
       labels:
-        app: msp-service
+        app: ${API_NAME}
       name: ${API_NAME}
     spec:
       selector:
-        deploymentconfig: ${API_NAME}
+        app: ${API_NAME}
       ports:
         - name: 8080-tcp
           port: 8080
           protocol: TCP
           targetPort: 8080
-  - apiVersion: v1
-    kind: DeploymentConfig
+  - apiVersion: apps/v1
+    kind: Deployment
     metadata:
       labels:
         app: msp-service
       name: ${API_NAME}
     spec:
       strategy:
-        type: Rolling
-      triggers:
-        - type: ConfigChange
-        - type: ImageChange
-          imageChangeParams:
-            automatic: true
-            containerNames:
-              - ${API_NAME}
-            from:
-              kind: ImageStreamTag
-              name: ${SOURCE_IMAGE_NAME}:${SOURCE_IMAGE_TAG}
-              namespace: ${SOURCE_IMAGE_NAMESPACE}
+        type: RollingUpdate
       replicas: 1
       selector:
-        deploymentconfig: ${API_NAME}
+        matchLabels:
+          app: ${API_NAME}
       template:
         metadata:
           labels:
-            app: msp-service
-            role: mspservice
-            deploymentconfig: ${API_NAME}
+            app: ${API_NAME}
+            # role: mspservice
           name: ${API_NAME}
         spec:
           containers:
             - name: ${API_NAME}
-              image: " "
+              image: "image-registry.apps.silver.devops.gov.bc.ca/${SOURCE_IMAGE_NAMESPACE}/${API_NAME}:${SOURCE_IMAGE_TAG}"
+              imagePullPolicy: Always
               readinessProbe:
                 httpGet:
                   path: /hello
@@ -102,19 +92,34 @@ objects:
                 - name: TARGET_URL
                   value: ${TARGET_URL}
                 - name: TARGET_USERNAME_PASSWORD
-                  value: ${TARGET_USERNAME_PASSWORD}
+                  valueFrom:
+                    secretKeyRef:
+                      name: msp-service-target-username-password
+                      key: credentials
                 - name: MUTUAL_TLS_PEM_KEY_BASE64
-                  value: ${MUTUAL_TLS_PEM_KEY_BASE64}
+                  valueFrom:
+                    secretKeyRef:
+                      name: msp-service-tls-key
+                      key: key
                 - name: MUTUAL_TLS_PEM_KEY_PASSPHRASE
-                  value: ${MUTUAL_TLS_PEM_KEY_PASSPHRASE}
+                  valueFrom:
+                    secretKeyRef:
+                      name: msp-service-tls-phrase
+                      key: phrase
                 - name: MUTUAL_TLS_PEM_CERT
-                  value: ${MUTUAL_TLS_PEM_CERT}
+                  valueFrom:
+                    secretKeyRef:
+                      name: msp-service-tls-cert
+                      key: cert
                 - name: SECURE_MODE
                   value: ${SECURE_MODE}
                 - name: USE_MUTUAL_TLS
                   value: ${USE_MUTUAL_TLS}
                 - name: AUTH_TOKEN_KEY
-                  value: ${AUTH_TOKEN_KEY}
+                  valueFrom:
+                    secretKeyRef:
+                      name: msp-service-auth-token-key
+                      key: key
                 - name: USE_AUTH_TOKEN
                   value: ${USE_AUTH_TOKEN}
                 - name: LOGGER_HOST
@@ -122,14 +127,16 @@ objects:
                 - name: LOGGER_PORT
                   value: ${LOGGER_PORT}
                 - name: SPLUNK_AUTH_TOKEN
-                  value: ${SPLUNK_AUTH_TOKEN}
+                  valueFrom:
+                    secretKeyRef:
+                      name: msp-service-splunk-auth-token
+                      key: token
               resources:
                 limits:
-                  cpu: 200m
                   memory: 128Mi
                 requests:
-                  cpu: 100m
-                  memory: 92Mi
+                  cpu: 50m
+                  memory: 128Mi
               # volumeMounts:
               #   - name: config-vol
               #     mountPath: /opt/app-root/src/build/config/config.json
@@ -152,6 +159,7 @@ parameters:
       the application.
     displayName: Build Project
     required: true
+    # value: (example) abc123-tools
   - name: LOG_LEVEL
     description: LOG_LEVEL
     displayName: LOG_LEVEL
@@ -165,6 +173,7 @@ parameters:
   - name: SOURCE_IMAGE_TAG
     description: The tag of the source image.
     displayName: Source Image Tag
+    # value: (example) dev (or test or prod)
     required: true
   - name: SERVICE_PORT
     description: The port this service will sisten on.
@@ -175,24 +184,8 @@ parameters:
     displayName: SERVICE_IP
     value: "0.0.0.0"
   - name: TARGET_URL
-    description: The remote Maximus URL
+    description: The remote URL
     displayName: TARGET_URL
-    required: true
-  - name: TARGET_USERNAME_PASSWORD
-    description: Username/password for the remote Maximus URL
-    displayName: TARGET_USERNAME_PASSWORD
-    required: true
-  - name: MUTUAL_TLS_PEM_KEY_BASE64
-    description: MUTUAL_TLS_PEM_KEY_BASE64
-    displayName: MUTUAL_TLS_PEM_KEY_BASE64
-    required: true
-  - name: MUTUAL_TLS_PEM_KEY_PASSPHRASE
-    description: MUTUAL_TLS_PEM_KEY_PASSPHRASE
-    displayName: MUTUAL_TLS_PEM_KEY_PASSPHRASE
-    required: true
-  - name: MUTUAL_TLS_PEM_CERT
-    description: MUTUAL_TLS_PEM_CERT
-    displayName: MUTUAL_TLS_PEM_CERT
     required: true
   - name: SECURE_MODE
     description: SECURE_MODE
@@ -204,11 +197,6 @@ parameters:
     displayName: USE_MUTUAL_TLS
     required: true
     value: "true"
-  - name: AUTH_TOKEN_KEY
-    description: |
-      Authorization token required to use the msp-service service
-    displayName: AUTH_TOKEN_KEY
-    required: true
   - name: USE_AUTH_TOKEN
     description: Use Authorization token?
     displayName: USE_AUTH_TOKEN
@@ -224,8 +212,3 @@ parameters:
     displayName: LOGGER_PORT
     required: true
     value: "8080"
-  - name: SPLUNK_AUTH_TOKEN
-    description: SPLUNK_AUTH_TOKEN
-    displayName: SPLUNK_AUTH_TOKEN
-    required: true
-    value: "true"
