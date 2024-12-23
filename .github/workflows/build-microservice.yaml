@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       microservice:
-        description: "Microservice to build"
+        description: "Microservice"
         required: true
         type: choice
         options:
@@ -24,13 +24,13 @@ on:
         required: true
         type: choice
         options:
-          - a3c641
-          - e1aae2
-          - f0463d
           - 0752cb
           - 3f9283
           - 61ab99
+          - a3c641
           - be8465
+          - e1aae2
+          - f0463d
     #   environment:
     #     description: "Environment to deploy to"
     #     required: true
@@ -47,7 +47,7 @@ env:
   BUILD_NAME: ${{ github.event.inputs.microservice }}-main-build
   SOURCE_IMAGE_TAG: "latest"
   TARGET_IMAGE_TAG: "dev"
-  WORKING_DIRECTORY: ./${{ github.event.inputs.microservice }}
+  # WORKING_DIRECTORY: ./${{ github.event.inputs.microservice }}
 
 jobs:
   validate:
@@ -57,67 +57,50 @@ jobs:
       good_to_go: ${{ steps.set_output.outputs.checks_valid }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           fetch-depth: 2
       - name: set output
         id: set_output
         run: |
           if [[ -z ${{ github.event.inputs.microservice }} ]]; then
-            echo "::set-output name=checks_valid::false"
+            echo "checks_valid=false" >> "$GITHUB_OUTPUT"
             echo "Deployment skipped because microservice not set"
           elif [[ -z ${{ github.event.inputs.license-plate }} ]]; then
-            echo "::set-output name=checks_valid::false"
+            echo "checks_valid=false" >> "$GITHUB_OUTPUT"
             echo "Deployment skipped because license plate not set"
           elif [[ ( $IMAGE_NAME == "bcsc-service") && ( $LICENSE_PLATE != "a3c641") ]]; then
-            echo "::set-output name=checks_valid::false"
-            echo "Deployment skipped because BCSC service is only used in a3c641"
+            echo "checks_valid=false" >> "$GITHUB_OUTPUT"
+            echo "Deployment skipped because BCSC service is only used in a3c641. Selected license-plate: $LICENSE_PLATE"
           elif [[ ( $IMAGE_NAME == "msp-service") && ( $LICENSE_PLATE == "3f9283") ]]; then
-            echo "::set-output name=checks_valid::false"
+            echo "checks_valid=false" >> "$GITHUB_OUTPUT"
             echo "Deployment skipped because 3f9283 uses a custom msp-service. See the project repo for details"
           else
-            echo "::set-output name=checks_valid::true"
+            echo "checks_valid=true" >> "$GITHUB_OUTPUT"
+            echo "License plate/microservice combination is valid, moving to next step"
           fi
   build:
     needs: [validate]
     if: needs.validate.outputs.good_to_go == 'true'
-    runs-on: ubuntu-latest    
-    defaults:
-      run:
-        working-directory: ${WORKING_DIRECTORY}
+    runs-on: ubuntu-latest
     steps:
+      - name: Test action
+        run: echo "test action reached. License plate $LICENSE_PLATE Namespace $NAMESPACE Image name $IMAGE_NAME"
+
       - uses: redhat-actions/openshift-tools-installer@v1
         with:
           source: "mirror"
           oc: "latest"
       - name: Log in to Openshift
-        run: oc login --token=${{ secrets[format('OS-{0}-Token', github.event.inputs.license-plate)] }} --server=${{ secrets.OpenShiftServerURL}}
+        run: oc login --token=${{ secrets[format('OS_{0}_Token', github.event.inputs.license-plate)] }} --server=${{ secrets.OpenShiftServerURL}}
       - name: Check version
         run: oc version
       - name: Generate Build
         run: oc start-build ${BUILD_NAME} -n ${NAMESPACE} --follow
       - name: Time delay
         # to give time for Openshift to process the build so it doesn't tag the wrong image
-        run: sleep 30s      
+        run: sleep 30s
       - name: Deploy to Target Environment
         run: oc tag ${NAMESPACE}/${IMAGE_NAME}:${SOURCE_IMAGE_TAG} ${NAMESPACE}/${IMAGE_NAME}:${TARGET_IMAGE_TAG}
-        #see OpenShift/RedHat documentation for more info on "oc tag" syntax
-        #example: `oc tag f0463d-dev/address-service:latest f0463d-dev/address-service:dev
-  deploy:
-    needs: [validate]
-    # if: ${{ needs.validate.outputs.good_to_go == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Test action
-        run: echo "test action reached. License plate $LICENSE_PLATE Namespace $NAMESPACE Image name $IMAGE_NAME"
-
-    #   - uses: redhat-actions/openshift-tools-installer@v1
-    #     with:
-    #       source: "mirror"
-    #       oc: "latest"
-    #   - name: Log in to Openshift
-    #     run: oc login --token=${{ secrets[format('OS-{0}-Token', github.event.inputs.license-plate)] }} --server=${{ secrets.OpenShiftServerURL}}
-    #   - name: Deploy to Target Environment
-    #     run: oc tag ${NAMESPACE}/${IMAGE_NAME}:${SOURCE_IMAGE_TAG} ${NAMESPACE}/${IMAGE_NAME}:${TARGET_IMAGE_TAG}
-    #     #see OpenShift/RedHat documentation for more info on "oc tag" syntax
-    #     #example: `oc tag f0463d-dev/address-service:latest f0463d-dev/address-service:dev
+        # see OpenShift/RedHat documentation for more info on "oc tag" syntax
+        # example: `oc tag f0463d-dev/address-service:latest f0463d-dev/address-service:dev
