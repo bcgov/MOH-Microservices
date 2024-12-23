@@ -100,17 +100,25 @@ objects:
                 - name: PORT
                   value: "8080"
                 - name: MUTUAL_TLS_PEM_KEY_BASE64
-                  value: ${MUTUAL_TLS_PEM_KEY_BASE64}
+                  # value: ${MUTUAL_TLS_PEM_KEY_BASE64}
+                  valueFrom:
+                    secretKeyRef:
+                      name: address-service-tls-key
+                      key: key
                 - name: MUTUAL_TLS_PEM_CERT
-                  value: ${MUTUAL_TLS_PEM_CERT}
+                  # value: ${MUTUAL_TLS_PEM_CERT}
+                  valueFrom:
+                    secretKeyRef:
+                      name: address-service-tls-cert
+                      key: cert
                 - name: ADDRESS_VALIDATOR_URL
                   value: ${ADDRESS_VALIDATOR_URL}
               resources:
                 limits:
-                  cpu: 200m
+                  # cpu: 200m
                   memory: 128Mi
                 requests:
-                  cpu: 100m
+                  cpu: 50m
                   memory: 92Mi
 parameters:
   - description: |
@@ -125,6 +133,7 @@ parameters:
       The namespace of the OpenShift project containing the imagestream for
       the application.
     displayName: Build Project
+    # value: (example) abc123-tools
     required: true
   - name: LOG_LEVEL
     description: LOG_LEVEL
@@ -148,14 +157,14 @@ parameters:
     description: The IP address this service will bind to.
     displayName: SERVICE_IP
     value: "0.0.0.0"
-  - name: MUTUAL_TLS_PEM_KEY_BASE64
-    description: MUTUAL_TLS_PEM_KEY_BASE64
-    displayName: MUTUAL_TLS_PEM_KEY_BASE64
-    required: true
-  - name: MUTUAL_TLS_PEM_CERT
-    description: MUTUAL_TLS_PEM_CERT
-    displayName: MUTUAL_TLS_PEM_CERT
-    required: true
+  # - name: MUTUAL_TLS_PEM_KEY_BASE64
+  #   description: MUTUAL_TLS_PEM_KEY_BASE64
+  #   displayName: MUTUAL_TLS_PEM_KEY_BASE64
+  #   required: true
+  # - name: MUTUAL_TLS_PEM_CERT
+  #   description: MUTUAL_TLS_PEM_CERT
+  #   displayName: MUTUAL_TLS_PEM_CERT
+  #   required: true
   - name: ADDRESS_VALIDATOR_URL
     description: ADDRESS_VALIDATOR_URL
     displayName: ADDRESS_VALIDATOR_URL
