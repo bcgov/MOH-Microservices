@@ -30,7 +30,7 @@ objects:
       name: splunk-local-log
     spec:
       accessModes:
-      - ReadWriteMany
+        - ReadWriteMany
       resources:
         requests:
           storage: 1Gi
@@ -57,50 +57,40 @@ objects:
     kind: Service
     metadata:
       labels:
-        app: splunk-forwarder
+        app: ${API_NAME}
       name: ${API_NAME}
     spec:
       selector:
-        deploymentconfig: ${API_NAME}
+        app: ${API_NAME}
       ports:
         - name: 8080-tcp
           port: 8080
           protocol: TCP
           targetPort: 8080
-  - apiVersion: v1
-    kind: DeploymentConfig
+  - apiVersion: apps/v1
+    kind: Deployment
     metadata:
       labels:
-        app: splunk-forwarder
+        app: ${API_NAME}
       name: ${API_NAME}
     spec:
       strategy:
-        type: Rolling
-      triggers:
-        - type: ConfigChange
-        - type: ImageChange
-          imageChangeParams:
-            automatic: true
-            containerNames:
-              - ${API_NAME}
-            from:
-              kind: ImageStreamTag
-              name: ${SOURCE_IMAGE_NAME}:${SOURCE_IMAGE_TAG}
-              namespace: ${SOURCE_IMAGE_NAMESPACE}
+        type: RollingUpdate
       replicas: 1
       selector:
-        deploymentconfig: ${API_NAME}
+        matchLabels:
+          app: ${API_NAME}
       template:
         metadata:
           labels:
-            app: splunk-forwarder
-            role: splunkforwarder
-            deploymentconfig: ${API_NAME}
+            app: ${API_NAME}
+            # role: splunkforwarder
           name: ${API_NAME}
         spec:
           containers:
             - name: ${API_NAME}
-              image: " "
+              image: "image-registry.apps.silver.devops.gov.bc.ca/${SOURCE_IMAGE_NAMESPACE}/${API_NAME}:${SOURCE_IMAGE_TAG}"
+              imagePullPolicy: Always
               readinessProbe:
                 httpGet:
                   path: /hello
@@ -123,7 +113,10 @@ objects:
                 - name: SERVICE_USE_AUTH
                   value: ${SERVICE_USE_AUTH}
                 - name: SERVICE_AUTH_TOKEN
-                  value: ${SERVICE_AUTH_TOKEN}
+                  valueFrom:
+                    secretKeyRef:
+                      name: splunk-forwarder-service-auth-token
+                      key: token
                 - name: LOG_DIR_NAME
                   value: ${LOG_DIR_NAME}
                 - name: FILE_LOG_LEVEL
@@ -131,9 +124,15 @@ objects:
                 - name: APPEND_POD_NAME_TO_FILE
                   value: ${APPEND_POD_NAME_TO_FILE}
                 - name: MONITOR_USERNAME
-                  value: ${MONITOR_USERNAME}
+                  valueFrom:
+                    secretKeyRef:
+                      name: splunk-forwarder-monitor-username
+                      key: username
                 - name: MONITOR_PASSWORD
-                  value: ${MONITOR_PASSWORD}
+                  valueFrom:
+                    secretKeyRef:
+                      name: splunk-forwarder-monitor-password
+                      key: password
                 - name: MAX_FILES
                   value: ${MAX_FILES}
                 - name: MAX_BYTE_SIZE_PER_FILE
@@ -143,19 +142,25 @@ objects:
                 - name: SPLUNK_URL
                   value: ${SPLUNK_URL}
                 - name: SPLUNK_AUTH_TOKEN
-                  value: ${SPLUNK_AUTH_TOKEN}
+                  valueFrom:
+                    secretKeyRef:
+                      name: splunk-forwarder-splunk-auth-token
+                      key: token
                 - name: ONLY_LOG_WHEN_SPLUNK_FAILS
                   value: ${ONLY_LOG_WHEN_SPLUNK_FAILS}
                 - name: CA_CERT
-                  value: ${CA_CERT}
+                  valueFrom:
+                    secretKeyRef:
+                      name: splunk-forwarder-ca-cert
+                      key: cert
                 - name: RETRY_COUNT
                   value: ${RETRY_COUNT}
               resources:
                 limits:
-                  cpu: 200m
+                #   cpu: 200m
                   memory: 128Mi
                 requests:
-                  cpu: 100m
+                  cpu: 50m
                   memory: 92Mi
               volumeMounts:
                 - mountPath: "/var/logs"
@@ -178,6 +183,7 @@ parameters:
       the application.
     displayName: Build Project
     required: true
+    # value: (example) be8465-tools
   - name: LOG_LEVEL
     description: Log level for pod
     displayName: LOG_LEVEL
@@ -191,6 +197,7 @@ parameters:
   - name: SOURCE_IMAGE_TAG
     description: The tag of the source image.
     displayName: Source Image Tag
+    # value: (example) dev (or test or prod)
     required: true
   - name: SERVICE_USE_AUTH
     description: Use Authorization token?
@@ -200,8 +207,6 @@ parameters:
   - name: SERVICE_AUTH_TOKEN
     description: |
       Authorization token required to use the splunk-forwarder service
-    displayName: SERVICE_AUTH_TOKEN
-    required: true
   - name: LOG_DIR_NAME
     description: |
       Directory and name of File logs (will be prepended with 
@@ -218,16 +223,6 @@ parameters:
     displayName: FILE_LOG_LEVEL
     required: true
     value: info
-  - name: MONITOR_USERNAME
-    description: |
-      Username to login to /monitor route via HTTP Basic Authentication
-    displayName: MONITOR_USERNAME
-    value: ""
-  - name: MONITOR_PASSWORD
-    description: |
-      Password to login to /monitor route via HTTP Basic Authentication
-    displayName: MONITOR_PASSWORD
-    required: true
   - name: MAX_FILES
     description: |
       Maximum # of log files to rotate over (total storage size = max #
@@ -256,26 +251,19 @@ parameters:
     description: Use Splunk?
     displayName: USE_SPLUNK
     required: false
-    value: "false"
+    value: "true"
   - name: SPLUNK_URL
     description: remote splunk URL
     displayName: SPLUNK_URL
-    required: false
-  - name: SPLUNK_AUTH_TOKEN
-    description: Splunk Auth Token
-    displayName: SPLUNK_AUTH_TOKEN
-    required: false
+    required: true
+    # value: (example) 'https://logdestination.com/ingest'
   - name: ONLY_LOG_WHEN_SPLUNK_FAILS
     description: Only log to local volume when connection to remote splunk fails
     displayName: ONLY_LOG_WHEN_SPLUNK_FAILS 
     required: false
     value: "true"
-  - name: CA_CERT
-    description: Certificate to connect to remote splunk
-    displayName: CA_CERT
-    required: false
   - name: RETRY_COUNT
     description: Number of times to retry remote splunk
     displayName: RETRY_COUNT
     required: true
-    value: "1"
+    value: "10"

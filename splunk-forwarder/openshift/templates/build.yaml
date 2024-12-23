@@ -12,6 +12,9 @@ objects:
     name: ${NAME}
     labels:
       app: ${NAME}
+  spec:
+    lookupPolicy:
+      local: true
 - apiVersion: v1
   kind: BuildConfig
   metadata:
@@ -26,7 +29,6 @@ objects:
         name: ${NAME}:${OUTPUT_IMAGE_TAG}
     resources:
       limits:
-        cpu: ${CPU_LIMIT}
         memory: ${MEMORY_LIMIT}
       requests:
         cpu: ${CPU_REQUEST}
@@ -65,7 +67,7 @@ parameters:
   displayName: Git Repo URL
   name: GIT_REPO_URL
   required: true
-  value: https://github.com/bcgov/MOH-MSP-Enrolment.git
+  value: https://github.com/bcgov/MOH-Microservices
 - description: The git reference or branch.
   displayName: Git Reference
   name: GIT_REF
@@ -96,11 +98,6 @@ parameters:
   name: SOURCE_IMAGE_TAG
   value: "10"
   required: true
-- description: The resources CPU limit (in cores) for this build.
-  displayName: Resources CPU Limit
-  name: CPU_LIMIT
-  required: true
-  value: "2"
 - description: The resources Memory limit (in Mi, Gi, etc) for this build.
   displayName: Resources Memory Limit
   name: MEMORY_LIMIT
@@ -110,7 +107,7 @@ parameters:
   displayName: Resources CPU Request
   name: CPU_REQUEST
   required: true
-  value: "1"
+  value: ".5"
 - description: The resources Memory request (in Mi, Gi, etc) for this build.
   displayName: Resources Memory Request
   name: MEMORY_REQUEST
