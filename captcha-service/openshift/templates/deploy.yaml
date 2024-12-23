@@ -42,50 +42,40 @@ objects:
     kind: Service
     metadata:
       labels:
-        app: captcha-service
+        app: ${API_NAME}
       name: ${API_NAME}
     spec:
       selector:
-        deploymentconfig: ${API_NAME}
+        app: ${API_NAME}
       ports:
         - name: 8080-tcp
           port: 8080
           protocol: TCP
           targetPort: 8080
-  - apiVersion: v1
-    kind: DeploymentConfig
+  - apiVersion: apps/v1
+    kind: Deployment
     metadata:
       labels:
         app: captcha-service
       name: ${API_NAME}
     spec:
       strategy:
-        type: Rolling
-      triggers:
-        - type: ConfigChange
-        - type: ImageChange
-          imageChangeParams:
-            automatic: true
-            containerNames:
-              - ${API_NAME}
-            from:
-              kind: ImageStreamTag
-              name: ${SOURCE_IMAGE_NAME}:${SOURCE_IMAGE_TAG}
-              namespace: ${SOURCE_IMAGE_NAMESPACE}
+        type: RollingUpdate
       replicas: 1
       selector:
-        deploymentconfig: ${API_NAME}
+        matchLabels:
+          app: ${API_NAME}
       template:
         metadata:
           labels:
-            app: captcha-service
-            role: captchaservice
-            deploymentconfig: ${API_NAME}
+            app: ${API_NAME}
+            # role: captchaservice
           name: ${API_NAME}
         spec:
           containers:
             - name: ${API_NAME}
-              image: " "
+              image: "image-registry.apps.silver.devops.gov.bc.ca/${SOURCE_IMAGE_NAMESPACE}/${API_NAME}:${SOURCE_IMAGE_TAG}"
+              imagePullPolicy: Always
               readinessProbe:
                 httpGet:
                   path: /hello
@@ -102,7 +92,10 @@ objects:
                 - name: SERVICE_PORT
                   value: ${SERVICE_PORT}
                 - name: SECRET
-                  value: ${SECRET}
+                  valueFrom:
+                    secretKeyRef:
+                      name: captcha-service-secret
+                      key: secret
                 - name: PRIVATE_KEY
                   value: ${PRIVATE_KEY}
                 - name: SYSLOG_PORT
@@ -115,19 +108,10 @@ objects:
                   value: ${JWT_SIGN_EXPIRY}
               resources:
                 limits:
-                  cpu: 200m
-                  memory: 256Mi
+                  memory: 512Mi
                 requests:
-                  cpu: 100m
-                  memory: 192Mi
-              # volumeMounts:
-              #   - name: config-vol
-              #     mountPath: /opt/app-root/src/build/config/config.json
-              #     subPath: config.json
-          # volumes:
-          #   - name: config-vol
-          #     configMap:
-          #       name: registry-api-config
+                  cpu: 50m
+                  memory: 512Mi
 parameters:
   - description: |
       The name assigned to all of the objects defined in this template.  You
@@ -142,6 +126,7 @@ parameters:
       the application.
     displayName: Build Project
     required: true
+    # value: (example) abc123-tools
   - name: SOURCE_IMAGE_NAME
     description: The name of the source image.
     displayName: Source Image Name
@@ -155,14 +140,6 @@ parameters:
     description: The port this service will sisten on.
     displayName: SERVICE_PORT
     value: "8080"
-  - name: SERVICE_IP
-    description: The IP address this service will bind to.
-    displayName: SERVICE_IP
-    value: "0.0.0.0"
-  - name: SECRET
-    description: SECRET
-    displayName: SECRET
-    required: true
   - name: PRIVATE_KEY
     description: PRIVATE_KEY
     displayName: PRIVATE_KEY
@@ -181,6 +158,7 @@ parameters:
     description: BYPASS_ANSWER
     displayName: BYPASS_ANSWER
     required: false
+    # value: "irobot" #comment out for prod
   - name: CORS_ALLOW_ALL
     description: CORS_ALLOW_ALL
     displayName: CORS_ALLOW_ALL
