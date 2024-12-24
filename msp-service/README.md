@@ -64,3 +64,9 @@ openssl s_client -showcerts -connect <servername>:<port> -servername <servername
 
 ## Production Setup
 See [Deploy to OpenShift](openshift/README.md) docs.
+
+## Steps to run locally
+1. Start the mock-logger using `npm run start-mock-logger`
+2. Start the mock-api using `npm run start-mock-api`
+3. Start the msp-service itself using `npm run start-local-service`
+4. Send a test API call using `npm run send-test-api-call` -- it should redirect to the mock-api and send a log to the mock-logger.
