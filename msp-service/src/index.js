@@ -30,6 +30,8 @@ function logProvider(provider) {
 //    timestamp: true
 // });
 
+const SERVICE_PORT = process.env.PORT || 8080;
+
 //
 // Generate token for monitoring apps
 //
@@ -250,7 +252,7 @@ var proxy = createProxyMiddleware({
 app.use('/', proxy);
 
 // Start express
-app.listen(8080);
+app.listen(SERVICE_PORT);
 
 
 /**
@@ -357,7 +359,7 @@ function logSplunkInfo (message) {
     req.end();
 }
 
-logSplunkInfo('msp-service server started on port 8080');
+logSplunkInfo(`msp-service server started on port ${SERVICE_PORT}`);
 
 
 
