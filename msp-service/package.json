@@ -10,6 +10,7 @@
     "start-mock-logger": "nodemon bin/mock-logger.js",
     "start-mock-api": "nodemon bin/mock-api.js",
     "send-test-api-call": "node bin/send-test-api-call.js",
+    "test": "vitest run",
     "dev": "nodemon --watch src --inspect=0.0.0.0:9229 --exec node ./src/index.js server",
     "test:coverage": "echo \"WARNING: No test specified\" && exit 0",
     "test:lint": "echo \"WARNING: No LINTer specified\" && exit 0",
@@ -40,7 +41,8 @@
     "gulp-clean": "^0.4.0",
     "gulp-sourcemaps": "^2.6.5",
     "gulp-typescript": "^6.0.0-alpha.1",
-    "nodemon": "^2.0.22"
+    "nodemon": "^2.0.22",
+    "vitest": "^2.1.8"
   },
   "engines": {
     "node": ">=10.0.0"
