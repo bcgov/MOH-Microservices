@@ -37,7 +37,7 @@ export const generateServiceCommand = (override) => {
     TARGET_URL: "http://localhost:3001",
     USE_AUTH_TOKEN: true,
     AUTH_TOKEN_KEY: "aaa",
-    timeout: "30s",
+    timeout: "5s",
   };
 
   Object.assign(options, override);

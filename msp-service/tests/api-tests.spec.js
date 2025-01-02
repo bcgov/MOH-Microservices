@@ -10,6 +10,7 @@ import * as jwt from "jsonwebtoken";
 import { it } from "vitest";
 
 const VALID_SECRET = "defaultSecret";
+const INVALID_SECRET = "foobar";
 
 //these need to match the values in start-local-service.sh
 const mockLoggerUrl = "http://localhost:3000";
@@ -158,12 +159,12 @@ describe("Service paths", () => {
     expect(response.status).toBe(200);
   });
 
-  it("(Service) Happy path-- Responds with a 200 when USE_AUTH_TOKEN is false", async () => {
+  it("(Service) Happy path-- Responds with a 200 when USE_AUTH_TOKEN is false and missing X-Auth header", async () => {
     const port = generatePortNumber();
     const command = generateServiceCommand({
       PORT: port,
       USE_AUTH_TOKEN: false,
-      AUTH_TOKEN_KEY: "aaa",
+      AUTH_TOKEN_KEY: VALID_SECRET,
       LOGGER_HOST: "localhost",
       LOGGER_PORT: 3000,
       HOSTNAME: "asdf",
@@ -175,7 +176,8 @@ describe("Service paths", () => {
     await tryServer(serverUrl, "HEAD");
 
     const headers = new Headers();
-    headers.append("X-Authorization", `Bearer ${validToken}`);
+    // commented out X-Auth token for this particular test
+    // headers.append("X-Authorization", `Bearer ${validToken}`);
 
     const testUrl = `http://localhost:${port}/MSPDESubmitAttachment/123e4567-e89b-12d3-a456-426655440000`;
 
@@ -187,7 +189,7 @@ describe("Service paths", () => {
     expect(response.status).toBe(200);
   });
 
-  it("(Service) Happy path-- Responds with a 200 when AUTH_TOKEN_KEY is empty/falsy", async () => {
+  it("(Service) Happy path-- Responds with a 200 when AUTH_TOKEN_KEY is empty/falsy and missing X-Auth header", async () => {
     const port = generatePortNumber();
     const command = generateServiceCommand({
       PORT: port,
@@ -204,7 +206,8 @@ describe("Service paths", () => {
     await tryServer(serverUrl, "HEAD");
 
     const headers = new Headers();
-    headers.append("X-Authorization", `Bearer ${validToken}`);
+    // commented out X-Auth token for this particular test
+    // headers.append("X-Authorization", `Bearer ${validToken}`);
 
     const testUrl = `http://localhost:${port}/MSPDESubmitAttachment/123e4567-e89b-12d3-a456-426655440000`;
 
@@ -289,7 +292,6 @@ describe("Service paths", () => {
 
   it("(Service) Responds with a 401 when JWT is signed with invalid secret", async () => {
     //here "invalid secret" means "secret that doesn't match the AUTH_TOKEN_KEY in the msp-service command"
-    const INVALID_SECRET = "foobar";
     const wrongSecretToken = jwt.sign(
       {
         data: {
