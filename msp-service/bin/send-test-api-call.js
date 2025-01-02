@@ -1,3 +1,6 @@
+//This script sends a test API call to the msp-service
+//If all three of the mock services are running, you'll see a successful log in the mock-api
+
 const { exec } = require("child_process");
 const jwt = require("jsonwebtoken");
 
@@ -30,5 +33,4 @@ exec(command, (error, stdout, stderr) => {
   console.log(`stdout: ${stdout}`);
   console.error(`stderr: ${stderr}`);
 });
-
 
