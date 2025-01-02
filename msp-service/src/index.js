@@ -291,7 +291,7 @@ function logSplunkError (message) {
             'logsource': process.env.HOSTNAME,
             'timestamp': moment().format('DD-MMM-YYYY'),
             'program': 'msp-service',
-            'serverity': 'error'
+            'severity': 'error'
         }
     };
 
@@ -336,7 +336,7 @@ function logSplunkInfo (message) {
             'timestamp': moment().format('DD-MMM-YYYY'),
             'method': 'MSP-Service - Pass Through',
             'program': 'msp-service',
-            'serverity': 'info'
+            'severity': 'info'
         }
     };
 
