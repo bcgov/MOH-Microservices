@@ -1,3 +1,9 @@
+# This script starts a local msp-service instance
+# It includes the environment variables required for the service to run
+# It also includes connections to a logger and to a target URL
+# This script will connect to the mock API and logger if they are running
+
+export PORT=8080
 export LOGGER_HOST=localhost
 export LOGGER_PORT=3000 # needs to match whatever's in mock-logger.js
 export HOSTNAME=""
