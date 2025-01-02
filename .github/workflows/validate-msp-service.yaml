@@ -3,6 +3,7 @@ on:
   push:
     paths:
       - "msp-service/src/**/*.js"
+      - "msp-service/tests/**/*.js"
       - "msp-service/package*.json"
   workflow_dispatch:
 
