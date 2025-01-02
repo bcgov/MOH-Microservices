@@ -1,64 +1,392 @@
-import { tryServer } from "./test-helpers.js";
+import {
+  tryServer,
+  generateServiceCommand,
+  generatePortNumber,
+} from "./test-helpers.js";
+import { http, HttpResponse, bypass } from "msw";
+import { setupServer } from "msw/node";
+import { exec } from "child_process";
+import * as jwt from "jsonwebtoken";
+import { it } from "vitest";
 
-const { exec } = require("node:child_process");
+const VALID_SECRET = "defaultSecret";
 
 //these need to match the values in start-local-service.sh
 const mockLoggerUrl = "http://localhost:3000";
 const mockApiUrl = "http://localhost:3001";
-const localServiceUrl = "http://localhost:8080";
 
-//create child process to run the services for the duration of the tests
-//vitest doesn't always close child processes out when it finishes, so there's a timeout here to make extra sure they close
+const validToken = jwt.sign(
+  {
+    data: {
+      nonce: "123e4567-e89b-12d3-a456-426655440000",
+    },
+  },
+  VALID_SECRET,
+  {
+    expiresIn: "30m",
+  }
+);
 
-const startMockLogger = async () => {
-  const childProcess = await exec(
-    "timeout 45s node bin/mock-logger.js",
-    (err, stdout, stderr) => {}
-  );
+const testBody = { body: "xyz", logsource: "integration test request" };
+
+const startLocalServiceWith = async (command) => {
+  await exec(command, (err, stdout, stderr) => {
+    console.log("service failed to start: ", err);
+  });
 };
 
-const startMockApi = async () => {
-  const childProcess = await exec(
-    "timeout 45s node bin/mock-api.js",
-    (err, stdout, stderr) => {}
-  );
-};
+//Mock Service Worker handlers-- let us mock out logger/API calls without running servers
+export const handlers = [
+  http.get(mockApiUrl, (request) => {
+    return new HttpResponse(null, {
+      status: 200,
+      statusText: "OK",
+    });
+  }),
+  http.get(mockLoggerUrl, (request) => {
+    return new HttpResponse(null, {
+      status: 200,
+      statusText: "OK",
+    });
+  }),
+];
 
-const startLocalService = async () => {
-  const childProcess = await exec(
-    "timeout 45s bin/start-local-service.sh --test",
-    (err, stdout, stderr) => {}
-  );
-};
+const server = setupServer(...handlers);
 
-describe("test", () => {
-  beforeAll(async () => {
-    await startMockLogger();
-    await startMockApi();
-    await startLocalService();
-    await tryServer(mockLoggerUrl, "HEAD");
-    await tryServer(mockApiUrl, "HEAD");
-    await tryServer(localServiceUrl, "GET");
-  }, 30000);
+describe("Service paths", () => {
+  //Mock Service Worker requires server.listen, server.close, and server.resetHandlers
+  // Start server before all tests
+  beforeAll(() => server.listen({ onUnhandledRequest: "bypass" }));
 
-  it("(Mock logger) Should respond with a 200 to the / endpoint", async () => {
-    const response = await fetch(`${mockLoggerUrl}`, {
+  //  Close server after all tests
+  afterAll(() => server.close());
+
+  // Reset handlers after each test--important for test isolation
+  afterEach(() => server.resetHandlers());
+
+  it("(MSW mock) Should properly intercept mockAPI calls", async () => {
+    const response = await fetch(mockApiUrl, {
+      method: "GET",
+    });
+    expect(response.status).toBe(200);
+  });
+
+  it("(MSW mock) Should properly intercept mockLogger calls", async () => {
+    const response = await fetch(mockLoggerUrl, {
+      method: "GET",
+    });
+    expect(response.status).toBe(200);
+  });
+
+  it("(Service) Should respond with a 200 to the /hello endpoint", async () => {
+    const port = generatePortNumber();
+    const command = generateServiceCommand({
+      PORT: port,
+    });
+    await startLocalServiceWith(command);
+    const url = `http://localhost:${port}/hello`;
+    await tryServer(url, "HEAD");
+    const response = await fetch(url, {
       method: "HEAD",
     });
     expect(response.status).toBe(200);
   });
 
-  it("(Mock api) Should respond with a 200 to the / endpoint", async () => {
-    const response = await fetch(`${mockApiUrl}`, {
+  it("(Service) Should respond with a 200 to the /health endpoint", async () => {
+    const port = generatePortNumber();
+    const command = generateServiceCommand({
+      PORT: port,
+    });
+    await startLocalServiceWith(command);
+    const url = `http://localhost:${port}/health`;
+    await tryServer(url, "HEAD");
+    const response = await fetch(url, {
       method: "HEAD",
     });
     expect(response.status).toBe(200);
   });
 
-  it("(Mock service) Should respond with a 200 to the / endpoint", async () => {
-    const response = await fetch(`${localServiceUrl}/hello`, {
+  it("(Service) Should respond with a 200 to the /status endpoint", async () => {
+    const port = generatePortNumber();
+    const command = generateServiceCommand({
+      PORT: port,
+    });
+    await startLocalServiceWith(command);
+    const url = `http://localhost:${port}/status`;
+    await tryServer(url, "HEAD");
+    const response = await fetch(url, {
       method: "HEAD",
     });
     expect(response.status).toBe(200);
+  });
+
+  it("(Service) Happy path-- Responds with a 200 when conditions are met", async () => {
+    //USE_AUTH_TOKEN needs to be true
+    //AUTH_TOKEN_KEY needs to have length > 0
+    //Request needs to include an X-Auth header containing a valid JWT
+    //JWT has a nonce in its data
+    //JWT was signed with the same AUTH_TOKEN_KEY used to initialize the msp-service
+    //URL is on the list of approved "nouns"/resource IDs
+    //resource ID and nonce match (if applicable)
+    //If all these things are correct, request will respond with a 200
+
+    const port = generatePortNumber();
+    const command = generateServiceCommand({
+      PORT: port,
+      USE_AUTH_TOKEN: true,
+      AUTH_TOKEN_KEY: VALID_SECRET,
+      LOGGER_HOST: "localhost",
+      LOGGER_PORT: 3000,
+      HOSTNAME: "asdf",
+      TARGET_URL: "http://localhost:3001",
+    });
+
+    await startLocalServiceWith(command);
+    const serverUrl = `http://localhost:${port}/`;
+    await tryServer(serverUrl, "HEAD");
+
+    const headers = new Headers();
+    headers.append("X-Authorization", `Bearer ${validToken}`);
+
+    const testUrl = `http://localhost:${port}/MSPDESubmitAttachment/123e4567-e89b-12d3-a456-426655440000`;
+
+    const response = await fetch(testUrl, {
+      method: "POST",
+      body: JSON.stringify(testBody),
+      headers: headers,
+    });
+    expect(response.status).toBe(200);
+  });
+
+  it("(Service) Happy path-- Responds with a 200 when USE_AUTH_TOKEN is false", async () => {
+    const port = generatePortNumber();
+    const command = generateServiceCommand({
+      PORT: port,
+      USE_AUTH_TOKEN: false,
+      AUTH_TOKEN_KEY: "aaa",
+      LOGGER_HOST: "localhost",
+      LOGGER_PORT: 3000,
+      HOSTNAME: "asdf",
+      TARGET_URL: "http://localhost:3001",
+    });
+
+    await startLocalServiceWith(command);
+    const serverUrl = `http://localhost:${port}/`;
+    await tryServer(serverUrl, "HEAD");
+
+    const headers = new Headers();
+    headers.append("X-Authorization", `Bearer ${validToken}`);
+
+    const testUrl = `http://localhost:${port}/MSPDESubmitAttachment/123e4567-e89b-12d3-a456-426655440000`;
+
+    const response = await fetch(testUrl, {
+      method: "POST",
+      body: JSON.stringify(testBody),
+      headers: headers,
+    });
+    expect(response.status).toBe(200);
+  });
+
+  it("(Service) Happy path-- Responds with a 200 when AUTH_TOKEN_KEY is empty/falsy", async () => {
+    const port = generatePortNumber();
+    const command = generateServiceCommand({
+      PORT: port,
+      USE_AUTH_TOKEN: true,
+      AUTH_TOKEN_KEY: "",
+      LOGGER_HOST: "localhost",
+      LOGGER_PORT: 3000,
+      HOSTNAME: "asdf",
+      TARGET_URL: "http://localhost:3001",
+    });
+
+    await startLocalServiceWith(command);
+    const serverUrl = `http://localhost:${port}/`;
+    await tryServer(serverUrl, "HEAD");
+
+    const headers = new Headers();
+    headers.append("X-Authorization", `Bearer ${validToken}`);
+
+    const testUrl = `http://localhost:${port}/MSPDESubmitAttachment/123e4567-e89b-12d3-a456-426655440000`;
+
+    const response = await fetch(testUrl, {
+      method: "POST",
+      body: JSON.stringify(testBody),
+      headers: headers,
+    });
+    expect(response.status).toBe(200);
+  });
+
+  it("(Service) Responds with a 401 when X-Authorization header is missing", async () => {
+    const port = generatePortNumber();
+    const command = generateServiceCommand({
+      PORT: port,
+      USE_AUTH_TOKEN: true,
+      AUTH_TOKEN_KEY: VALID_SECRET,
+      LOGGER_HOST: "localhost",
+      LOGGER_PORT: 3000,
+      HOSTNAME: "asdf",
+      TARGET_URL: "http://localhost:3001",
+    });
+
+    await startLocalServiceWith(command);
+    const serverUrl = `http://localhost:${port}/`;
+    await tryServer(serverUrl, "HEAD");
+
+    const headers = new Headers();
+    // commented out X-Auth token for this particular test
+    // headers.append("X-Authorization", `Bearer ${validToken}`);
+
+    const testUrl = `http://localhost:${port}/MSPDESubmitAttachment/123e4567-e89b-12d3-a456-426655440000`;
+
+    const response = await fetch(testUrl, {
+      method: "POST",
+      body: JSON.stringify(testBody),
+      headers: headers,
+    });
+    expect(response.status).toBe(401);
+  });
+
+  it("(Service) Responds with a 401 when JWT does not contain nonce", async () => {
+    const nonNonceToken = jwt.sign(
+      {
+        data: {
+          foobar: "123e4567-e89b-12d3-a456-426655440000",
+        },
+      },
+      VALID_SECRET,
+      {
+        expiresIn: "30m",
+      }
+    );
+
+    const port = generatePortNumber();
+    const command = generateServiceCommand({
+      PORT: port,
+      USE_AUTH_TOKEN: true,
+      AUTH_TOKEN_KEY: VALID_SECRET,
+      LOGGER_HOST: "localhost",
+      LOGGER_PORT: 3000,
+      HOSTNAME: "asdf",
+      TARGET_URL: "http://localhost:3001",
+    });
+
+    await startLocalServiceWith(command);
+    const serverUrl = `http://localhost:${port}/`;
+    await tryServer(serverUrl, "HEAD");
+
+    const headers = new Headers();
+    headers.append("X-Authorization", `Bearer ${nonNonceToken}`);
+
+    const testUrl = `http://localhost:${port}/MSPDESubmitAttachment/123e4567-e89b-12d3-a456-426655440000`;
+
+    const response = await fetch(testUrl, {
+      method: "POST",
+      body: JSON.stringify(testBody),
+      headers: headers,
+    });
+    expect(response.status).toBe(401);
+  });
+
+  it("(Service) Responds with a 401 when JWT is signed with invalid secret", async () => {
+    //here "invalid secret" means "secret that doesn't match the AUTH_TOKEN_KEY in the msp-service command"
+    const INVALID_SECRET = "foobar";
+    const wrongSecretToken = jwt.sign(
+      {
+        data: {
+          nonce: "123e4567-e89b-12d3-a456-426655440000",
+        },
+      },
+      INVALID_SECRET,
+      {
+        expiresIn: "30m",
+      }
+    );
+
+    const port = generatePortNumber();
+    const command = generateServiceCommand({
+      PORT: port,
+      USE_AUTH_TOKEN: true,
+      AUTH_TOKEN_KEY: VALID_SECRET,
+      LOGGER_HOST: "localhost",
+      LOGGER_PORT: 3000,
+      HOSTNAME: "asdf",
+      TARGET_URL: "http://localhost:3001",
+    });
+
+    await startLocalServiceWith(command);
+    const serverUrl = `http://localhost:${port}/`;
+    await tryServer(serverUrl, "HEAD");
+
+    const headers = new Headers();
+    headers.append("X-Authorization", `Bearer ${wrongSecretToken}`);
+
+    const testUrl = `http://localhost:${port}/MSPDESubmitAttachment/123e4567-e89b-12d3-a456-426655440000`;
+
+    const response = await fetch(testUrl, {
+      method: "POST",
+      body: JSON.stringify(testBody),
+      headers: headers,
+    });
+    expect(response.status).toBe(401);
+  });
+
+  it("(Service) Responds with a 401 when URL isn't on the approved noun list", async () => {
+    const port = generatePortNumber();
+    const command = generateServiceCommand({
+      PORT: port,
+      USE_AUTH_TOKEN: true,
+      AUTH_TOKEN_KEY: VALID_SECRET,
+      LOGGER_HOST: "localhost",
+      LOGGER_PORT: 3000,
+      HOSTNAME: "asdf",
+      TARGET_URL: "http://localhost:3001",
+    });
+
+    await startLocalServiceWith(command);
+    const serverUrl = `http://localhost:${port}/`;
+    await tryServer(serverUrl, "HEAD");
+
+    const headers = new Headers();
+    headers.append("X-Authorization", `Bearer ${validToken}`);
+
+    const invalidNoun = "foobar"
+    const testUrl = `http://localhost:${port}/${invalidNoun}/123e4567-e89b-12d3-a456-426655440000`;
+
+    const response = await fetch(testUrl, {
+      method: "POST",
+      body: JSON.stringify(testBody),
+      headers: headers,
+    });
+    expect(response.status).toBe(401);
+  });
+
+  it("(Service) Responds with a 401 when the URL nonce doesn't match the JWT nonce", async () => {
+    const port = generatePortNumber();
+    const command = generateServiceCommand({
+      PORT: port,
+      USE_AUTH_TOKEN: true,
+      AUTH_TOKEN_KEY: VALID_SECRET,
+      LOGGER_HOST: "localhost",
+      LOGGER_PORT: 3000,
+      HOSTNAME: "asdf",
+      TARGET_URL: "http://localhost:3001",
+    });
+
+    await startLocalServiceWith(command);
+    const serverUrl = `http://localhost:${port}/`;
+    await tryServer(serverUrl, "HEAD");
+
+    const headers = new Headers();
+    headers.append("X-Authorization", `Bearer ${validToken}`);
+
+    const invalidNoun = "foobar"
+    const testUrl = `http://localhost:${port}/MSPDESubmitAttachment/113e4567-e89b-12d3-a456-426655440000`;
+
+    const response = await fetch(testUrl, {
+      method: "POST",
+      body: JSON.stringify(testBody),
+      headers: headers,
+    });
+    expect(response.status).toBe(401);
   });
 });

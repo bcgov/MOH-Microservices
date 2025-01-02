@@ -36,7 +36,7 @@ export const generateServiceCommand = (override) => {
     HOSTNAME: "asdf",
     TARGET_URL: "http://localhost:3001",
     USE_AUTH_TOKEN: true,
-    AUTH_TOKEN_KEY: "defaultSecret",
+    AUTH_TOKEN_KEY: "aaa",
     timeout: "30s",
   };
 
