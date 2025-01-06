@@ -119,7 +119,17 @@ app.use('/', function (req, res, next) {
         // Check against the resource URL
         // typical URL:
         //    /MSPDESubmitApplication/2ea5e24c-705e-f7fd-d9f0-eb2dd268d523?programArea=enrolment
-        var pathname = url.parse(req.url).pathname;
+        
+        let pathname = req.url;
+
+        try {
+            URL.canParse(pathname);
+        } catch (err) {
+            logSplunkError("could not parse URL", req.url);
+            denyAccess("could not parse URL", res, req);
+            return;
+        }
+
         var pathnameParts = pathname.split("/");
 
         // find the noun(s)
