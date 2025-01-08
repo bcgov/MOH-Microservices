@@ -10,6 +10,17 @@ export HOSTNAME=""
 export TARGET_URL=http://localhost:3001
 export USE_AUTH_TOKEN=true
 export AUTH_TOKEN_KEY=defaultSecret
+export NOUN_JSON='{
+    "MSPDESubmitAttachment": {
+        "skipUuidCheck": false,
+        "skipUuidNonceMatchCheck": true
+    },
+    "bcp": {
+        "skipuuidCheck": true,
+        "skipNonceCheck": true,
+        "skipUuidNonceMatchCheck": true
+    }
+}'
 
 # if [ $1 = "--test" ]; then
     # echo "Running in test mode (local forwarder only)"

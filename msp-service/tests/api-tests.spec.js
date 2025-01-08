@@ -11,6 +11,8 @@ import { it } from "vitest";
 
 const VALID_SECRET = "defaultSecret";
 const INVALID_SECRET = "foobar";
+const VALID_NOUN= "MSPDESubmitAttachment"
+const VALID_UUID="123e4567-e89b-12d3-a456-426655440000"
 
 //these need to match the values in start-local-service.sh
 const mockLoggerUrl = "http://localhost:3000";
@@ -19,7 +21,7 @@ const mockApiUrl = "http://localhost:3001";
 const validToken = jwt.sign(
   {
     data: {
-      nonce: "123e4567-e89b-12d3-a456-426655440000",
+      nonce: `${VALID_UUID}`,
     },
   },
   VALID_SECRET,
@@ -149,7 +151,7 @@ describe("Service paths", () => {
     const headers = new Headers();
     headers.append("X-Authorization", `Bearer ${validToken}`);
 
-    const testUrl = `http://localhost:${port}/MSPDESubmitAttachment/123e4567-e89b-12d3-a456-426655440000`;
+    const testUrl = `http://localhost:${port}/${VALID_NOUN}/${VALID_UUID}`;
 
     const response = await fetch(testUrl, {
       method: "POST",
@@ -160,7 +162,7 @@ describe("Service paths", () => {
   });
 
   //this test works locally, but breaks in the Github workflow for some reason, so it's skipped for now
-  it.skip("(Service) Happy path-- Responds with a 200 when USE_AUTH_TOKEN is false and missing X-Auth header", async () => {
+  it("(Service) Happy path-- Responds with a 200 when USE_AUTH_TOKEN is false and missing X-Auth header", async () => {
     const port = generatePortNumber();
     const command = generateServiceCommand({
       PORT: port,
@@ -180,7 +182,7 @@ describe("Service paths", () => {
     // commented out X-Auth token for this particular test
     // headers.append("X-Authorization", `Bearer ${validToken}`);
 
-    const testUrl = `http://localhost:${port}/MSPDESubmitAttachment/123e4567-e89b-12d3-a456-426655440000`;
+    const testUrl = `http://localhost:${port}/${VALID_NOUN}/${VALID_UUID}`;
 
     const response = await fetch(testUrl, {
       method: "POST",
@@ -191,7 +193,7 @@ describe("Service paths", () => {
   });
 
   //this test works locally, but breaks in the Github workflow for some reason, so it's skipped for now
-  it.skip("(Service) Happy path-- Responds with a 200 when AUTH_TOKEN_KEY is empty/falsy and missing X-Auth header", async () => {
+  it("(Service) Happy path-- Responds with a 200 when AUTH_TOKEN_KEY is empty/falsy and missing X-Auth header", async () => {
     const port = generatePortNumber();
     const command = generateServiceCommand({
       PORT: port,
@@ -211,7 +213,7 @@ describe("Service paths", () => {
     // commented out X-Auth token for this particular test
     // headers.append("X-Authorization", `Bearer ${validToken}`);
 
-    const testUrl = `http://localhost:${port}/MSPDESubmitAttachment/123e4567-e89b-12d3-a456-426655440000`;
+    const testUrl = `http://localhost:${port}/${VALID_NOUN}/${VALID_UUID}`;
 
     const response = await fetch(testUrl, {
       method: "POST",
@@ -241,7 +243,7 @@ describe("Service paths", () => {
     // commented out X-Auth token for this particular test
     // headers.append("X-Authorization", `Bearer ${validToken}`);
 
-    const testUrl = `http://localhost:${port}/MSPDESubmitAttachment/123e4567-e89b-12d3-a456-426655440000`;
+    const testUrl = `http://localhost:${port}/${VALID_NOUN}/${VALID_UUID}`;
 
     const response = await fetch(testUrl, {
       method: "POST",
@@ -255,7 +257,7 @@ describe("Service paths", () => {
     const nonNonceToken = jwt.sign(
       {
         data: {
-          foobar: "123e4567-e89b-12d3-a456-426655440000",
+          foobar: VALID_UUID,
         },
       },
       VALID_SECRET,
@@ -282,7 +284,7 @@ describe("Service paths", () => {
     const headers = new Headers();
     headers.append("X-Authorization", `Bearer ${nonNonceToken}`);
 
-    const testUrl = `http://localhost:${port}/MSPDESubmitAttachment/123e4567-e89b-12d3-a456-426655440000`;
+    const testUrl = `http://localhost:${port}/${VALID_NOUN}/${VALID_UUID}`;
 
     const response = await fetch(testUrl, {
       method: "POST",
@@ -297,7 +299,7 @@ describe("Service paths", () => {
     const wrongSecretToken = jwt.sign(
       {
         data: {
-          nonce: "123e4567-e89b-12d3-a456-426655440000",
+          nonce: VALID_UUID,
         },
       },
       INVALID_SECRET,
@@ -324,7 +326,7 @@ describe("Service paths", () => {
     const headers = new Headers();
     headers.append("X-Authorization", `Bearer ${wrongSecretToken}`);
 
-    const testUrl = `http://localhost:${port}/MSPDESubmitAttachment/123e4567-e89b-12d3-a456-426655440000`;
+    const testUrl = `http://localhost:${port}/${VALID_NOUN}/${VALID_UUID}`;
 
     const response = await fetch(testUrl, {
       method: "POST",
@@ -336,6 +338,8 @@ describe("Service paths", () => {
 
   it("(Service) Responds with a 401 when URL isn't on the approved noun list", async () => {
     const port = generatePortNumber();
+    const testNoun = "foobar"
+
     const command = generateServiceCommand({
       PORT: port,
       USE_AUTH_TOKEN: true,
@@ -344,6 +348,7 @@ describe("Service paths", () => {
       LOGGER_PORT: 3000,
       HOSTNAME: "asdf",
       TARGET_URL: "http://localhost:3001",
+      NOUN_JSON: `{"${testNoun}": {"skipUuidCheck": false}}`
     });
 
     await startLocalServiceWith(command);
@@ -353,8 +358,8 @@ describe("Service paths", () => {
     const headers = new Headers();
     headers.append("X-Authorization", `Bearer ${validToken}`);
 
-    const invalidNoun = "foobar"
-    const testUrl = `http://localhost:${port}/${invalidNoun}/123e4567-e89b-12d3-a456-426655440000`;
+    const invalidNoun = "fizzbuzz"
+    const testUrl = `http://localhost:${port}/${invalidNoun}/${VALID_UUID}`;
 
     const response = await fetch(testUrl, {
       method: "POST",
@@ -364,8 +369,10 @@ describe("Service paths", () => {
     expect(response.status).toBe(401);
   });
 
-  it("(Service) Responds with a 401 when the URL nonce doesn't match the JWT nonce", async () => {
+  it("(Service) Responds with a 200 when URL noun matches noun list in env", async () => {
     const port = generatePortNumber();
+    const testNoun = "foobar"
+
     const command = generateServiceCommand({
       PORT: port,
       USE_AUTH_TOKEN: true,
@@ -374,6 +381,7 @@ describe("Service paths", () => {
       LOGGER_PORT: 3000,
       HOSTNAME: "asdf",
       TARGET_URL: "http://localhost:3001",
+      NOUN_JSON: `{"${testNoun}": {"skipUuidCheck": false, "skipUuidNonceMatchCheck": false}}`
     });
 
     await startLocalServiceWith(command);
@@ -383,8 +391,41 @@ describe("Service paths", () => {
     const headers = new Headers();
     headers.append("X-Authorization", `Bearer ${validToken}`);
 
-    const invalidNoun = "foobar"
-    const testUrl = `http://localhost:${port}/MSPDESubmitAttachment/113e4567-e89b-12d3-a456-426655440000`;
+    const testUrl = `http://localhost:${port}/${testNoun}/${VALID_UUID}`;
+
+    const response = await fetch(testUrl, {
+      method: "POST",
+      body: JSON.stringify(testBody),
+      headers: headers,
+    });
+    expect(response.status).toBe(200);
+  });
+
+  it("(Service) Responds with a 401 when the URL doesn't have a UUID", async () => {
+    const port = generatePortNumber();
+    const testNoun = "foobar"
+
+    const command = generateServiceCommand({
+      PORT: port,
+      USE_AUTH_TOKEN: true,
+      AUTH_TOKEN_KEY: VALID_SECRET,
+      LOGGER_HOST: "localhost",
+      LOGGER_PORT: 3000,
+      HOSTNAME: "asdf",
+      TARGET_URL: "http://localhost:3001",
+      NOUN_JSON: `{"${testNoun}": {"skipUuidCheck": false}}`
+    });
+
+    await startLocalServiceWith(command);
+    const serverUrl = `http://localhost:${port}/`;
+    await tryServer(serverUrl, "HEAD");
+
+    const headers = new Headers();
+    headers.append("X-Authorization", `Bearer ${validToken}`);
+
+    const absentUuid = ""
+
+    const testUrl = `http://localhost:${port}/${testNoun}/${absentUuid}`;
 
     const response = await fetch(testUrl, {
       method: "POST",
@@ -392,5 +433,107 @@ describe("Service paths", () => {
       headers: headers,
     });
     expect(response.status).toBe(401);
+  });
+
+  it("(Service) Responds with a 200 when the URL doesn't have a UUID but skip is true", async () => {
+    const port = generatePortNumber();
+    const testNoun = "foobar"
+
+    const command = generateServiceCommand({
+      PORT: port,
+      USE_AUTH_TOKEN: true,
+      AUTH_TOKEN_KEY: VALID_SECRET,
+      LOGGER_HOST: "localhost",
+      LOGGER_PORT: 3000,
+      HOSTNAME: "asdf",
+      TARGET_URL: "http://localhost:3001",
+      NOUN_JSON: `{"${testNoun}": {"skipUuidCheck": true}}`
+    });
+
+    await startLocalServiceWith(command);
+    const serverUrl = `http://localhost:${port}/`;
+    await tryServer(serverUrl, "HEAD");
+
+    const headers = new Headers();
+    headers.append("X-Authorization", `Bearer ${validToken}`);
+
+    const absentUuid = ""
+
+    const testUrl = `http://localhost:${port}/${testNoun}/${absentUuid}`;
+
+    const response = await fetch(testUrl, {
+      method: "POST",
+      body: JSON.stringify(testBody),
+      headers: headers,
+    });
+    expect(response.status).toBe(200);
+  });
+  
+  it("(Service) Responds with a 401 when the URL uuid doesn't match the JWT nonce and NOUN_JSON prohibits skip", async () => {
+    const port = generatePortNumber();
+    const testNoun = "foobar"
+  
+    const command = generateServiceCommand({
+      PORT: port,
+      USE_AUTH_TOKEN: true,
+      AUTH_TOKEN_KEY: VALID_SECRET,
+      LOGGER_HOST: "localhost",
+      LOGGER_PORT: 3000,
+      HOSTNAME: "asdf",
+      TARGET_URL: "http://localhost:3001",
+      NOUN_JSON: `{"${testNoun}": {"skipUuidCheck": false, "skipUuidNonceMatchCheck": false}}`
+    });
+  
+    await startLocalServiceWith(command);
+    const serverUrl = `http://localhost:${port}/`;
+    await tryServer(serverUrl, "HEAD");
+  
+    const headers = new Headers();
+    headers.append("X-Authorization", `Bearer ${validToken}`);
+  
+    const invalidUuid = "aaaaaaaa-e89b-12d3-a456-426655440000"
+  
+    const testUrl = `http://localhost:${port}/${testNoun}/${invalidUuid}`;
+  
+    const response = await fetch(testUrl, {
+      method: "POST",
+      body: JSON.stringify(testBody),
+      headers: headers,
+    });
+    expect(response.status).toBe(401);
+  });
+  
+  it("(Service) Responds with a 200 when the URL uuid doesn't match the JWT nonce and NOUN_JSON authorizes skip", async () => {
+    const port = generatePortNumber();
+    const testNoun = "foobar"
+  
+    const command = generateServiceCommand({
+      PORT: port,
+      USE_AUTH_TOKEN: true,
+      AUTH_TOKEN_KEY: VALID_SECRET,
+      LOGGER_HOST: "localhost",
+      LOGGER_PORT: 3000,
+      HOSTNAME: "asdf",
+      TARGET_URL: "http://localhost:3001",
+      NOUN_JSON: `{"${testNoun}": {"skipUuidCheck": false, "skipUuidNonceMatchCheck": true}}`
+    });
+  
+    await startLocalServiceWith(command);
+    const serverUrl = `http://localhost:${port}/`;
+    await tryServer(serverUrl, "HEAD");
+  
+    const headers = new Headers();
+    headers.append("X-Authorization", `Bearer ${validToken}`);
+  
+    const invalidUuid = "aaabbbcc-e89b-12d3-a456-426655440000"
+  
+    const testUrl = `http://localhost:${port}/${testNoun}/${invalidUuid}`;
+  
+    const response = await fetch(testUrl, {
+      method: "POST",
+      body: JSON.stringify(testBody),
+      headers: headers,
+    });
+    expect(response.status).toBe(200);
   });
 });
