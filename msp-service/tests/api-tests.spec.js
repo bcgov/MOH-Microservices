@@ -5,8 +5,6 @@ import {
   startMockLogger,
   startMockApi,
 } from "./test-helpers.js";
-import { http, HttpResponse, bypass } from "msw";
-import { setupServer } from "msw/node";
 import { exec } from "child_process";
 import * as jwt from "jsonwebtoken";
 import { it } from "vitest";
