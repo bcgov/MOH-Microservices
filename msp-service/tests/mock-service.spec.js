@@ -1,5 +1,7 @@
 import {
   tryServer,
+  startMockLogger,
+  startMockApi
 } from "./test-helpers.js";
 
 const { exec } = require("node:child_process");
@@ -12,23 +14,9 @@ const localServiceUrl = "http://localhost:8080";
 //create child process to run the services for the duration of the tests
 //vitest doesn't always close child processes out when it finishes, so there's a timeout here to make extra sure they close
 
-const startMockLogger = async () => {
-  const childProcess = await exec(
-    "timeout 45s node bin/mock-logger.js",
-    (err, stdout, stderr) => {}
-  );
-};
-
-const startMockApi = async () => {
-  const childProcess = await exec(
-    "timeout 45s node bin/mock-api.js",
-    (err, stdout, stderr) => {}
-  );
-};
-
 const startLocalService = async () => {
   const childProcess = await exec(
-    "timeout 45s bin/start-local-msp-service.sh --test",
+    "timeout 5s bin/start-local-msp-service.sh --test",
     (err, stdout, stderr) => {}
   );
 };

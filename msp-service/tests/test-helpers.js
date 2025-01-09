@@ -1,3 +1,24 @@
+const { exec } = require("node:child_process");
+
+export const startMockLogger = async (dynamicPort) => {
+  //if a dynamic port is used, add it to the bash script as an env variable
+  const dynamicPortEnv = !!dynamicPort ? `MOCK_LOGGER_PORT=${dynamicPort}` : "";
+  const childProcess = await exec(
+    `${dynamicPortEnv} timeout 5s node bin/mock-logger.js`,
+    (err, stdout, stderr) => {
+      // console.log("potato startup error", err, stderr);
+    }
+  );
+};
+
+export const startMockApi = async (dynamicPort) => {
+  const dynamicPortEnv = !!dynamicPort ? `MOCK_API_PORT=${dynamicPort}` : "";
+  const childProcess = await exec(
+    `${dynamicPortEnv} timeout 5s node bin/mock-api.js`,
+    (err, stdout, stderr) => {}
+  );
+};
+
 //to help ensure local servers are online before running integration tests
 export const tryServer = async (website, HTTPMethod) => {
   const retryAttempts = 10;

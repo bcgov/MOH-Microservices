@@ -4,7 +4,7 @@
 const express = require("express");
 const app = express();
 
-const MOCK_API_PORT = 3001; //needs to match the TARGET_URL in start-local-service.sh
+const MOCK_API_PORT = process.env.MOCK_API_PORT || 3001; //needs to match the TARGET_URL in start-local-service.sh
 const responseCode = 200; //set this to whatever you like, eg. 200, 204, or 500
 
 const generateDate = () => {

@@ -2,6 +2,8 @@ import {
   tryServer,
   generateServiceCommand,
   generatePortNumber,
+  startMockLogger,
+  startMockApi,
 } from "./test-helpers.js";
 import { http, HttpResponse, bypass } from "msw";
 import { setupServer } from "msw/node";
@@ -11,12 +13,8 @@ import { it } from "vitest";
 
 const VALID_SECRET = "defaultSecret";
 const INVALID_SECRET = "foobar";
-const VALID_NOUN= "MSPDESubmitAttachment"
-const VALID_UUID="123e4567-e89b-12d3-a456-426655440000"
-
-//these need to match the values in start-local-service.sh
-const mockLoggerUrl = "http://localhost:3000";
-const mockApiUrl = "http://localhost:3001";
+const VALID_NOUN = "MSPDESubmitAttachment";
+const VALID_UUID = "123e4567-e89b-12d3-a456-426655440000";
 
 const validToken = jwt.sign(
   {
@@ -34,38 +32,32 @@ const testBody = { body: "xyz", logsource: "integration test request" };
 
 const startLocalServiceWith = async (command) => {
   await exec(command, (err, stdout, stderr) => {
-    console.log("service failed to start: ", err);
+    // console.log("service failed to start: ", err);
   });
 };
 
-//Mock Service Worker handlers-- let us mock out logger/API calls without running servers
-export const handlers = [
-  http.get(mockApiUrl, (request) => {
-    return new HttpResponse(null, {
-      status: 200,
-      statusText: "OK",
-    });
-  }),
-  http.get(mockLoggerUrl, (request) => {
-    return new HttpResponse(null, {
-      status: 200,
-      statusText: "OK",
-    });
-  }),
-];
 
-const server = setupServer(...handlers);
+
 
 describe("Service paths", () => {
-  //Mock Service Worker requires server.listen, server.close, and server.resetHandlers
-  // Start server before all tests
-  beforeAll(() => server.listen({ onUnhandledRequest: "bypass" }));
+  let mockLoggerPort;
+  let mockApiPort;
 
-  //  Close server after all tests
-  afterAll(() => server.close());
+  let mockLoggerUrl;
+  let mockApiUrl;
 
-  // Reset handlers after each test--important for test isolation
-  afterEach(() => server.resetHandlers());
+  beforeEach(async () => {
+    mockLoggerPort = generatePortNumber();
+    mockApiPort = generatePortNumber();
+
+    mockLoggerUrl = `http://localhost:${mockLoggerPort}`;
+    mockApiUrl = `http://localhost:${mockApiPort}`;
+
+    await startMockLogger(mockLoggerPort);
+    await startMockApi(mockApiPort);
+    await tryServer(mockLoggerUrl, "HEAD");
+    await tryServer(mockApiUrl, "HEAD");
+  });
 
   it("(MSW mock) Should properly intercept mockAPI calls", async () => {
     const response = await fetch(mockApiUrl, {
@@ -76,7 +68,7 @@ describe("Service paths", () => {
 
   it("(MSW mock) Should properly intercept mockLogger calls", async () => {
     const response = await fetch(mockLoggerUrl, {
-      method: "GET",
+      method: "HEAD",
     });
     expect(response.status).toBe(200);
   });
@@ -140,9 +132,9 @@ describe("Service paths", () => {
       USE_AUTH_TOKEN: true,
       AUTH_TOKEN_KEY: VALID_SECRET,
       LOGGER_HOST: "localhost",
-      LOGGER_PORT: 3000,
+      LOGGER_PORT: mockLoggerPort,
       HOSTNAME: "asdf",
-      TARGET_URL: "http://localhost:3001",
+      TARGET_URL: `http://localhost:${mockApiPort}`,
     });
 
     await startLocalServiceWith(command);
@@ -170,9 +162,9 @@ describe("Service paths", () => {
       USE_AUTH_TOKEN: false,
       AUTH_TOKEN_KEY: VALID_SECRET,
       LOGGER_HOST: "localhost",
-      LOGGER_PORT: 3000,
+      LOGGER_PORT: mockLoggerPort,
       HOSTNAME: "asdf",
-      TARGET_URL: "http://localhost:3001",
+      TARGET_URL: `http://localhost:${mockApiPort}`,
     });
 
     await startLocalServiceWith(command);
@@ -201,9 +193,9 @@ describe("Service paths", () => {
       USE_AUTH_TOKEN: true,
       AUTH_TOKEN_KEY: "",
       LOGGER_HOST: "localhost",
-      LOGGER_PORT: 3000,
+      LOGGER_PORT: mockLoggerPort,
       HOSTNAME: "asdf",
-      TARGET_URL: "http://localhost:3001",
+      TARGET_URL: `http://localhost:${mockApiPort}`,
     });
 
     await startLocalServiceWith(command);
@@ -231,9 +223,9 @@ describe("Service paths", () => {
       USE_AUTH_TOKEN: true,
       AUTH_TOKEN_KEY: VALID_SECRET,
       LOGGER_HOST: "localhost",
-      LOGGER_PORT: 3000,
+      LOGGER_PORT: mockLoggerPort,
       HOSTNAME: "asdf",
-      TARGET_URL: "http://localhost:3001",
+      TARGET_URL: `http://localhost:${mockApiPort}`,
     });
 
     await startLocalServiceWith(command);
@@ -273,9 +265,9 @@ describe("Service paths", () => {
       USE_AUTH_TOKEN: true,
       AUTH_TOKEN_KEY: VALID_SECRET,
       LOGGER_HOST: "localhost",
-      LOGGER_PORT: 3000,
+      LOGGER_PORT: mockLoggerPort,
       HOSTNAME: "asdf",
-      TARGET_URL: "http://localhost:3001",
+      TARGET_URL: `http://localhost:${mockApiPort}`,
     });
 
     await startLocalServiceWith(command);
@@ -315,9 +307,9 @@ describe("Service paths", () => {
       USE_AUTH_TOKEN: true,
       AUTH_TOKEN_KEY: VALID_SECRET,
       LOGGER_HOST: "localhost",
-      LOGGER_PORT: 3000,
+      LOGGER_PORT: mockLoggerPort,
       HOSTNAME: "asdf",
-      TARGET_URL: "http://localhost:3001",
+      TARGET_URL: `http://localhost:${mockApiPort}`,
     });
 
     await startLocalServiceWith(command);
@@ -339,17 +331,17 @@ describe("Service paths", () => {
 
   it("(Service) Responds with a 401 when URL isn't on the approved noun list", async () => {
     const port = generatePortNumber();
-    const testNoun = "foobar"
+    const testNoun = "foobar";
 
     const command = generateServiceCommand({
       PORT: port,
       USE_AUTH_TOKEN: true,
       AUTH_TOKEN_KEY: VALID_SECRET,
       LOGGER_HOST: "localhost",
-      LOGGER_PORT: 3000,
+      LOGGER_PORT: mockLoggerPort,
       HOSTNAME: "asdf",
-      TARGET_URL: "http://localhost:3001",
-      NOUN_JSON: `{"${testNoun}": {"skipUuidCheck": false}}`
+      TARGET_URL: `http://localhost:${mockApiPort}`,
+      NOUN_JSON: `{"${testNoun}": {"skipUuidCheck": false}}`,
     });
 
     await startLocalServiceWith(command);
@@ -359,7 +351,7 @@ describe("Service paths", () => {
     const headers = new Headers();
     headers.append("X-Authorization", `Bearer ${validToken}`);
 
-    const invalidNoun = "fizzbuzz"
+    const invalidNoun = "fizzbuzz";
     const testUrl = `http://localhost:${port}/${invalidNoun}/${VALID_UUID}`;
 
     const response = await fetch(testUrl, {
@@ -372,17 +364,17 @@ describe("Service paths", () => {
 
   it("(Service) Responds with a 200 when URL noun matches noun list in env", async () => {
     const port = generatePortNumber();
-    const testNoun = "foobar"
+    const testNoun = "foobar";
 
     const command = generateServiceCommand({
       PORT: port,
       USE_AUTH_TOKEN: true,
       AUTH_TOKEN_KEY: VALID_SECRET,
       LOGGER_HOST: "localhost",
-      LOGGER_PORT: 3000,
+      LOGGER_PORT: mockLoggerPort,
       HOSTNAME: "asdf",
-      TARGET_URL: "http://localhost:3001",
-      NOUN_JSON: `{"${testNoun}": {"skipUuidCheck": false, "skipUuidNonceMatchCheck": false}}`
+      TARGET_URL: `http://localhost:${mockApiPort}`,
+      NOUN_JSON: `{"${testNoun}": {"skipUuidCheck": false, "skipUuidNonceMatchCheck": false}}`,
     });
 
     await startLocalServiceWith(command);
@@ -404,17 +396,17 @@ describe("Service paths", () => {
 
   it("(Service) Responds with a 401 when the URL doesn't have a UUID", async () => {
     const port = generatePortNumber();
-    const testNoun = "foobar"
+    const testNoun = "foobar";
 
     const command = generateServiceCommand({
       PORT: port,
       USE_AUTH_TOKEN: true,
       AUTH_TOKEN_KEY: VALID_SECRET,
       LOGGER_HOST: "localhost",
-      LOGGER_PORT: 3000,
+      LOGGER_PORT: mockLoggerPort,
       HOSTNAME: "asdf",
-      TARGET_URL: "http://localhost:3001",
-      NOUN_JSON: `{"${testNoun}": {"skipUuidCheck": false}}`
+      TARGET_URL: `http://localhost:${mockApiPort}`,
+      NOUN_JSON: `{"${testNoun}": {"skipUuidCheck": false}}`,
     });
 
     await startLocalServiceWith(command);
@@ -424,7 +416,7 @@ describe("Service paths", () => {
     const headers = new Headers();
     headers.append("X-Authorization", `Bearer ${validToken}`);
 
-    const absentUuid = ""
+    const absentUuid = "";
 
     const testUrl = `http://localhost:${port}/${testNoun}/${absentUuid}`;
 
@@ -438,17 +430,17 @@ describe("Service paths", () => {
 
   it("(Service) Responds with a 200 when the URL doesn't have a UUID but skip is true", async () => {
     const port = generatePortNumber();
-    const testNoun = "foobar"
+    const testNoun = "foobar";
 
     const command = generateServiceCommand({
       PORT: port,
       USE_AUTH_TOKEN: true,
       AUTH_TOKEN_KEY: VALID_SECRET,
       LOGGER_HOST: "localhost",
-      LOGGER_PORT: 3000,
+      LOGGER_PORT: mockLoggerPort,
       HOSTNAME: "asdf",
-      TARGET_URL: "http://localhost:3001",
-      NOUN_JSON: `{"${testNoun}": {"skipUuidCheck": true}}`
+      TARGET_URL: `http://localhost:${mockApiPort}`,
+      NOUN_JSON: `{"${testNoun}": {"skipUuidCheck": true}}`,
     });
 
     await startLocalServiceWith(command);
@@ -458,7 +450,7 @@ describe("Service paths", () => {
     const headers = new Headers();
     headers.append("X-Authorization", `Bearer ${validToken}`);
 
-    const absentUuid = ""
+    const absentUuid = "";
 
     const testUrl = `http://localhost:${port}/${testNoun}/${absentUuid}`;
 
@@ -469,33 +461,33 @@ describe("Service paths", () => {
     });
     expect(response.status).toBe(200);
   });
-  
+
   it("(Service) Responds with a 401 when the URL uuid doesn't match the JWT nonce and NOUN_JSON prohibits skip", async () => {
     const port = generatePortNumber();
-    const testNoun = "foobar"
-  
+    const testNoun = "foobar";
+
     const command = generateServiceCommand({
       PORT: port,
       USE_AUTH_TOKEN: true,
       AUTH_TOKEN_KEY: VALID_SECRET,
       LOGGER_HOST: "localhost",
-      LOGGER_PORT: 3000,
+      LOGGER_PORT: mockLoggerPort,
       HOSTNAME: "asdf",
-      TARGET_URL: "http://localhost:3001",
-      NOUN_JSON: `{"${testNoun}": {"skipUuidCheck": false, "skipUuidNonceMatchCheck": false}}`
+      TARGET_URL: `http://localhost:${mockApiPort}`,
+      NOUN_JSON: `{"${testNoun}": {"skipUuidCheck": false, "skipUuidNonceMatchCheck": false}}`,
     });
-  
+
     await startLocalServiceWith(command);
     const serverUrl = `http://localhost:${port}/`;
     await tryServer(serverUrl, "HEAD");
-  
+
     const headers = new Headers();
     headers.append("X-Authorization", `Bearer ${validToken}`);
-  
-    const invalidUuid = "aaaaaaaa-e89b-12d3-a456-426655440000"
-  
+
+    const invalidUuid = "aaaaaaaa-e89b-12d3-a456-426655440000";
+
     const testUrl = `http://localhost:${port}/${testNoun}/${invalidUuid}`;
-  
+
     const response = await fetch(testUrl, {
       method: "POST",
       body: JSON.stringify(testBody),
@@ -503,33 +495,33 @@ describe("Service paths", () => {
     });
     expect(response.status).toBe(401);
   });
-  
+
   it("(Service) Responds with a 200 when the URL uuid doesn't match the JWT nonce and NOUN_JSON authorizes skip", async () => {
     const port = generatePortNumber();
-    const testNoun = "foobar"
-  
+    const testNoun = "foobar";
+
     const command = generateServiceCommand({
       PORT: port,
       USE_AUTH_TOKEN: true,
       AUTH_TOKEN_KEY: VALID_SECRET,
       LOGGER_HOST: "localhost",
-      LOGGER_PORT: 3000,
+      LOGGER_PORT: mockLoggerPort,
       HOSTNAME: "asdf",
-      TARGET_URL: "http://localhost:3001",
-      NOUN_JSON: `{"${testNoun}": {"skipUuidCheck": false, "skipUuidNonceMatchCheck": true}}`
+      TARGET_URL: `http://localhost:${mockApiPort}`,
+      NOUN_JSON: `{"${testNoun}": {"skipUuidCheck": false, "skipUuidNonceMatchCheck": true}}`,
     });
-  
+
     await startLocalServiceWith(command);
     const serverUrl = `http://localhost:${port}/`;
     await tryServer(serverUrl, "HEAD");
-  
+
     const headers = new Headers();
     headers.append("X-Authorization", `Bearer ${validToken}`);
-  
-    const invalidUuid = "aaabbbcc-e89b-12d3-a456-426655440000"
-  
+
+    const invalidUuid = "aaabbbcc-e89b-12d3-a456-426655440000";
+
     const testUrl = `http://localhost:${port}/${testNoun}/${invalidUuid}`;
-  
+
     const response = await fetch(testUrl, {
       method: "POST",
       body: JSON.stringify(testBody),
