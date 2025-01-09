@@ -129,8 +129,9 @@ describe("Service paths", () => {
     //Request needs to include an X-Auth header containing a valid JWT
     //JWT has a nonce in its data
     //JWT was signed with the same AUTH_TOKEN_KEY used to initialize the msp-service
-    //URL is on the list of approved "nouns"/resource IDs
-    //resource ID and nonce match (if applicable)
+    //Incoming request URL is on the list of approved "nouns"/resource IDs
+    //URL contains a uuid unless skipped
+    //resource ID and nonce match unless skipped
     //If all these things are correct, request will respond with a 200
 
     const port = generatePortNumber();
@@ -253,7 +254,7 @@ describe("Service paths", () => {
     expect(response.status).toBe(401);
   });
 
-  it("(Service) Responds with a 401 when JWT does not contain nonce", async () => {
+  it("(Service) Responds with a 401 when JWT does not contain a nonce property", async () => {
     const nonNonceToken = jwt.sign(
       {
         data: {
