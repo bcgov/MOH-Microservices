@@ -3,6 +3,7 @@ on:
   push:
     paths:
       - "msp-service/src/**/*.js"
+      - "msp-service/tests/**/*.js"
       - "msp-service/package*.json"
   workflow_dispatch:
 
@@ -17,11 +18,11 @@ jobs:
       - uses: actions/checkout@main
       - uses: actions/setup-node@main
         with:
-          node-version: "12"
+          node-version: "18"
       - name: Install dependencies
         run: npm ci
-      - name: Unit tests w/ coverage
-        run: npm run test:coverage
+      - name: Unit tests
+        run: npm run test
       - name: LINTing
         run: npm run test:lint
       # - name: OpenAPI Schema

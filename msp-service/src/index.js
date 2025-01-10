@@ -30,6 +30,8 @@ function logProvider(provider) {
 //    timestamp: true
 // });
 
+const SERVICE_PORT = process.env.PORT || 8080;
+
 //
 // Generate token for monitoring apps
 //
@@ -42,6 +44,37 @@ if (process.env.USE_AUTH_TOKEN &&
         data: {nonce: "status"}
     }, process.env.AUTH_TOKEN_KEY);
     logSplunkInfo("Monitoring token: " + monitoringToken);
+}
+
+//
+// Validate environment variables
+//
+
+//in Node, these should be process.env variables
+//in OpenShift, these should be environment variables in the pod/deployment
+//either way, if they're invalid, we want to know immediately so we can fix them
+
+if (!process.env.TARGET_URL) {
+    //msp-service can't redirect traffic unless a destination is defined
+    throw Error("No TARGET_URL specified")
+}
+if (!URL.canParse(process.env.TARGET_URL)) {
+    //msp-service can't redirect traffic to an invalid url
+    throw Error(`TARGET_URL is not a valid URL: ${process.env.TARGET_URL}`)
+}
+
+if (!process.env.NOUN_JSON) {
+    //msp-service needs this to verify the incoming request URL structure
+    //passing them down as an env variable lets us configure different ones for different OpenShift namespaces
+    //this lets us use one msp-service codebase for multiple projects
+    throw Error("No NOUN_JSON specified")
+}
+
+try {
+    // Try to parse NOUN_JSON
+    JSON.parse(process.env.NOUN_JSON)
+} catch (err) {
+    throw Error(`NOUN_JSON is not valid JSON: ${process.env.NOUN_JSON}. Error: ${err}`)
 }
 
 //
@@ -110,81 +143,77 @@ app.use('/', function (req, res, next) {
         if (decoded == null ||
             decoded.data.nonce == null ||
             decoded.data.nonce.length < 1) {
-            denyAccess("missing nonce", res, req);
+            denyAccess("nonce not included in decrypted auth token", res, req);
             return;
         }
 
         // Check against the resource URL
         // typical URL:
         //    /MSPDESubmitApplication/2ea5e24c-705e-f7fd-d9f0-eb2dd268d523?programArea=enrolment
-        var pathname = url.parse(req.url).pathname;
+        
+        let pathname = req.url;
+
+        try {
+            URL.canParse(pathname);
+        } catch (err) {
+            denyAccess("could not parse URL", res, req);
+            return;
+        }
+
         var pathnameParts = pathname.split("/");
 
-        // find the noun(s)
-        var nounIndex = pathnameParts.indexOf("MSPDESubmitAttachment");
-        if (nounIndex < 0) {
-            nounIndex = pathnameParts.indexOf("MSPDESubmitApplication") ;
-        }
-        if (nounIndex < 0) {
-            nounIndex = pathnameParts.indexOf("submit-attachment") ;
-        }
-        if (nounIndex < 0) {
-            nounIndex = pathnameParts.indexOf("submit-application") ;
-        }
-        if (nounIndex < 0) {
-            nounIndex = pathnameParts.indexOf("accLetterIntegration") ;
-        }
-        if (nounIndex < 0) {
-            nounIndex = pathnameParts.indexOf("siteregIntegration");
-        }
-        if (nounIndex < 0) {
-            nounIndex = pathnameParts.indexOf("jhaIntegration");
-        }
-		if (nounIndex < 0) {                                                                                                                          
-            nounIndex = pathnameParts.indexOf("bcp");                                                                                  
-        } 
+        const nounObject = JSON.parse(process.env.NOUN_JSON);
+        const nounArray = Object.keys(nounObject);
 
-        if (nounIndex < 0 ||
-            pathnameParts.length < nounIndex + 2) {
+        let selectedNoun = null;
+        for (const element of nounArray) {
+            if (pathnameParts.includes(element)) {
+                selectedNoun = element;
+                break;
+            }
+        }
+
+        if (!selectedNoun) {
             denyAccess("missing noun or resource id", res, req);
             return;
         }
 
-		// check to see if not accLetterIntegration/suppbenefit
-		if (pathnameParts.indexOf("suppbenefit") > 0 || pathnameParts.indexOf("siteregIntegration") > 0) {
-			if (pathnameParts[nounIndex + 2] != decoded.data.nonce) {                                                                                 
-                denyAccess("resource id and nonce are not equal: " + pathnameParts[nounIndex + 2] + "; " + decoded.data.nonce, res, req);             
-                return;                                                                                                                            
-            } 
-        }
-        // For "submit-attachment" API, we check that application UUID and nonce exist.
-        // We don't check that are equal because JHA has sub-programs (MSP, FPC, and SB) which have their own application UUIDs, and they won't match the nonce created by the captcha service.
-        else if (pathnameParts.indexOf('submit-attachment') > -1) {
-            if (!pathnameParts[nounIndex + 2]) {
-                denyAccess(`application UUID not included in URL: ${pathnameParts[nounIndex + 2]}`, res, req);
-                return;
-            } else if (!decoded.data.nonce) {
-                denyAccess(`nonce not included in decrypted auth token: ${decoded.data.nonce}`, res, req);
-                return;
+        //uuids always have the same format, so we can use a regular expression to pick it out of the URL
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/
+
+        //extract uuid from URL
+        let urlUuid = null;
+        for (const segment of pathnameParts) {
+            if (uuidRegex.test(segment)) {
+                urlUuid = segment;
+                break;
             }
         }
-        else if (pathnameParts[nounIndex] === 'jhaIntegration') {
-            if (pathnameParts[nounIndex + 1] === 'application' &&
-                pathnameParts[nounIndex + 2] !== decoded.data.nonce) {
-                denyAccess(`JHA resource ID and nonce are not equal: ${pathnameParts[nounIndex + 2]}; ${decoded.data.nonce}`, res, req);
-				return;
-            }
-            // Allow all other "jhaIntegration" calls to proxy to the middleware.
+
+        //select the skip options specific to the noun found in the URL
+        const selectedOptions = nounObject[selectedNoun];
+
+        //if URL doesn't have a uuid at the end, then the "skipUuidCheck" property needs to be true in order to proceed
+        //if that property exists and is true, then the skip check is true
+        //if that property doesn't exist, or if it does exist and is set to false, then set to false
+        const skipUuid = selectedOptions.hasOwnProperty("skipUuidCheck") && selectedOptions["skipUuidCheck"] === true ? true : false
+
+        //if the url doesn't have a uuid and there's no reason to skip the check, deny access
+        if (!urlUuid && !skipUuid) {
+            denyAccess(`application UUID not included in URL: ${pathname}`, res, req);
+            return;
         }
-		else {
-			// Finally, check that resource ID against the nonce
-			if (pathnameParts[nounIndex + 1] != decoded.data.nonce) {
-				denyAccess("resource id and nonce are not equal: " + pathnameParts[nounIndex + 1] + "; " + decoded.data.nonce, res, req);
-				return;
-			}
-		}
+
+        const jwtNonce = decoded.data.nonce;        
+        const skipMatch = selectedOptions.hasOwnProperty("skipUuidNonceMatchCheck") && selectedOptions["skipUuidNonceMatchCheck"] === true ? true : false
+
+        //if UUID and JWT nonce don't match AND there's no reason to skip the check, deny access
+        if (urlUuid !== jwtNonce && !skipUuid && !skipMatch) {
+            denyAccess(`url uuid and jwt nonce are not equal: ${pathname}`, res, req);
+            return;
+        }
     }
-    // OK its valid let it pass thru this event
+    // OK it's valid let it pass thru this event
     next(); // pass control to the next handler
 });
 
@@ -250,7 +279,7 @@ var proxy = createProxyMiddleware({
 app.use('/', proxy);
 
 // Start express
-app.listen(8080);
+app.listen(SERVICE_PORT);
 
 
 /**
@@ -289,7 +318,7 @@ function logSplunkError (message) {
             'logsource': process.env.HOSTNAME,
             'timestamp': moment().format('DD-MMM-YYYY'),
             'program': 'msp-service',
-            'serverity': 'error'
+            'severity': 'error'
         }
     };
 
@@ -334,7 +363,7 @@ function logSplunkInfo (message) {
             'timestamp': moment().format('DD-MMM-YYYY'),
             'method': 'MSP-Service - Pass Through',
             'program': 'msp-service',
-            'serverity': 'info'
+            'severity': 'info'
         }
     };
 
@@ -357,7 +386,7 @@ function logSplunkInfo (message) {
     req.end();
 }
 
-logSplunkInfo('msp-service server started on port 8080');
+logSplunkInfo(`msp-service server started on port ${SERVICE_PORT}`);
 
 
 
