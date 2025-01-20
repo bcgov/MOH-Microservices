@@ -7,10 +7,12 @@ const jwt = require("jsonwebtoken");
 const SECRET = "defaultSecret";
 const SERVICE_PORT = 8080; //needs to be 8080 because that's what's in the index.js
 
+const validNonce = "123e4567-e89b-12d3-a456-426655440000"
+
 const token = jwt.sign(
   {
     data: {
-      nonce: "123e4567-e89b-12d3-a456-426655440000",
+      nonce: validNonce,
     },
   },
   SECRET,
@@ -23,7 +25,9 @@ const testBody = { body: "xyz", logsource: "test curl request" };
 
 // const decoded = jwt.verify(token, SECRET);
 
-const command = `curl -XPOST -H "X-Authorization: Bearer ${token}" -H "Content-Type: application/json" -d '{"body": "xyz", "logsource":"test curl request" }' localhost:${SERVICE_PORT}/MSPDESubmitAttachment/123e4567-e89b-12d3-a456-426655440000`;
+const url = `localhost:${SERVICE_PORT}/MSPDESubmitAttachment/${validNonce}`
+
+const command = `curl -XPOST -H "X-Authorization: Bearer ${token}" -H "Content-Type: application/json" -d '{"body": "xyz", "logsource":"test curl request" }' ${url} `;
 
 exec(command, (error, stdout, stderr) => {
   if (error) {

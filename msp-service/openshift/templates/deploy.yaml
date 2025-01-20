@@ -131,6 +131,8 @@ objects:
                     secretKeyRef:
                       name: msp-service-splunk-auth-token
                       key: token
+                - name: NOUN_JSON
+                  value: ${NOUN_JSON}
               resources:
                 limits:
                   memory: 128Mi
@@ -212,3 +214,7 @@ parameters:
     displayName: LOGGER_PORT
     required: true
     value: "8080"
+  - name: NOUN_JSON
+    description: List of acceptable nouns/resource IDs for incoming requests to come from. Should be configured for each project
+    displayName: NOUN_JSON
+    value: '{"MSPDESubmitAttachment": {"skipUuidCheck": false,"skipUuidNonceMatchCheck": true},"bcp": {"skipuuidCheck": true,"skipNonceCheck": true,"skipUuidNonceMatchCheck": true}}'
