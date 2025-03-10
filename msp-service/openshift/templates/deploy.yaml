@@ -20,24 +20,26 @@ metadata:
     description: |
       Deployment template for the SPA environment variable server
     iconClass: icon-node
-  name: msp-service
+  name: ${API_NAME}
 objects:
-  - apiVersion: v1
-    kind: Route
-    metadata:
-      labels:
-        app: msp-service
-      name: ${API_NAME}
-    spec:
-      path: ""
-      port:
-        targetPort: 8080-tcp
-      tls:
-        termination: edge
-      to:
-        kind: Service
-        name: ${API_NAME}
-        weight: 100
+  # can uncomment this in DEV for troubleshooting if needed
+  # please leave out in TEST/PROD to decrease security risks
+  # - apiVersion: v1
+  #   kind: Route
+  #   metadata:
+  #     labels:
+  #       app: ${API_NAME}
+  #     name: ${API_NAME}
+  #   spec:
+  #     path: ""
+  #     port:
+  #       targetPort: 8080-tcp
+  #     tls:
+  #       termination: edge
+  #     to:
+  #       kind: Service
+  #       name: ${API_NAME}
+  #       weight: 100
   - apiVersion: v1
     kind: Service
     metadata:
@@ -55,6 +57,7 @@ objects:
   - apiVersion: apps/v1
     kind: Deployment
     metadata:
+      image.openshift.io/triggers: '[{"from":{"kind":"ImageStreamTag","name":"${API_NAME}:${SOURCE_IMAGE_TAG}","namespace":"${SOURCE_IMAGE_NAMESPACE}"},"fieldPath":"spec.template.spec.containers[?(@.name==\"${API_NAME}\")].image"}]'
       labels:
         app: msp-service
       name: ${API_NAME}
