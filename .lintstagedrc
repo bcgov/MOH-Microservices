@@ -1,0 +1,4 @@
+{
+  "*.{js,ts,jsx,tsx,vue,cjs}": ["eslint splunk-forwarder/**"],
+  "*": ["prettier splunk-forwarder/** --check --ignore-unknown"]
+}
