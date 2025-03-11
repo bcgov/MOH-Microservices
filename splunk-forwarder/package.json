@@ -5,11 +5,12 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/bcgov/MOH-MSP-Enrolment.git"
+    "url": "git+https://github.com/bcgov/MOH-Microservices"
   },
   "homepage": "",
   "main": "index.js",
   "scripts": {
+    "build": "echo \"WARNING: No script specified\" && exit 0",
     "start": "node $NODE_DEBUG_OPTION src/index.js server",
     "start-local-service": "bin/start-local-service.sh",
     "start-mock-logger": "nodemon bin/mock-logger.js",
@@ -18,8 +19,11 @@
     "test": "vitest --exclude '**/integration/*.spec.js'",
     "test:integration": "vitest run -- --no-threads",
     "test:coverage": "vitest run --coverage",
-    "test:lint": "echo \"WARNING: No LINTer specified\" && exit 0",
-    "test:schema": "echo \"WARNING: No schema specified\" && exit 0"
+    "test:lint": "eslint .",
+    "lint": "eslint .",
+    "format": "prettier . --write",
+    "prepare": "node ../.husky/install.mjs",
+    "pre-commit": "lint-staged"
   },
   "dependencies": {
     "express": "^5.0.1",
