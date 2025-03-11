@@ -11,21 +11,15 @@ const localForwarderUrl = "http://localhost:8080";
 const startMockLogger = () => {
   //create child process to run the mock-logger for the duration of the tests
   //vitest doesn't always close child processes out when it finishes, so there's a timeout here to make extra sure they close
-  exec(
-    "timeout 45s node bin/mock-logger.js",
-    () => {
-      //err, stdout, stderr
-    }
-  );
+  exec("timeout 45s node bin/mock-logger.js", () => {
+    //err, stdout, stderr
+  });
 };
 
 const startLocalForwarder = () => {
-  exec(
-    "timeout 45s bin/start-local-service.sh --test",
-    () => {
-      //err, stdout, stderr
-    }
-  );
+  exec("timeout 45s bin/start-local-service.sh --test", () => {
+    //err, stdout, stderr
+  });
 };
 
 describe("Start local servers, test APIs", async () => {
