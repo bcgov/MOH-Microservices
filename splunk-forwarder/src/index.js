@@ -3,11 +3,9 @@
 =============================================*/
 const winston = require("winston");
 const DailyRotateFile = require("winston-daily-rotate-file");
-const bodyParser = require("body-parser");
 const safeStringify = require("json-stringify-safe");
 const express = require("express");
 const app = express();
-const fs = require("fs");
 const serveIndex = require("serve-index");
 const { Agent, fetch } = require("undici");
 
@@ -46,6 +44,33 @@ const APPEND_POD_NAME_TO_FILE = process.env.APPEND_POD_NAME_TO_FILE == "true";
 const FILE_LOG_NAME = LOG_DIR_NAME
   ? LOG_DIR_NAME + "/sf" + (APPEND_POD_NAME_TO_FILE ? "-" + HOST_NAME : "") + ".log"
   : "./logs/sf" + (APPEND_POD_NAME_TO_FILE ? "-" + HOST_NAME : "") + ".log";
+
+if (process.env.SERVICE_PORT < 1 || process.env.SERVICE_PORT > 65535) {
+  //port number must be valid
+  throw new Error(
+    "Port must be an integer between 1 and 65535, found: " + process.env.SERVICE_PORT
+  );
+}
+
+if (!process.env.SPLUNK_URL) {
+  throw Error("No SPLUNK_URL specified-- can't forward logs without a destination");
+}
+
+if (!URL.canParse(process.env.SPLUNK_URL)) {
+  throw Error(`SPLUNK_URL is not a valid URL: ${process.env.SPLUNK_URL}`);
+}
+
+if (!process.env.CA_CERT) {
+  throw Error(`No CA_CERT specified-- this is needed for auth`);
+}
+
+if (!process.env.SPLUNK_AUTH_TOKEN) {
+  throw Error(`No SPLUNK_AUTH_TOKEN specified-- this is needed for auth`);
+}
+
+if (!process.env.LOG_DIR_NAME) {
+  throw Error(`No LOG_DIR_NAME specified-- can't serve logs at /monitor without a log source`);
+}
 
 /*=============================================
 =            APPLICATION CONFIGURATION        =
@@ -106,17 +131,12 @@ if (process.env.NODE_ENV != "production" || process.env.CORS_ALLOW_ALL == "true"
 }
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-var args = process.argv;
 
-if (args.length == 3 && args[2] == "server") {
-  var server = app.listen(SERVICE_PORT, SERVICE_IP, function () {
-    var host = server.address().address;
-    var port = server.address().port;
-    winstonLogger.info(
-      `START log server (${HOST_NAME})-  loglevel(${FILE_LOG_LEVEL}) fileLocation(${FILE_LOG_NAME})`
-    );
-  });
-}
+app.listen(SERVICE_PORT, SERVICE_IP, function () {
+  winstonLogger.info(
+    `START log server (${HOST_NAME})-  loglevel(${FILE_LOG_LEVEL}) fileLocation(${FILE_LOG_NAME})`
+  );
+});
 
 // health and readiness check
 app.get("/hello", function (req, res) {
@@ -153,16 +173,17 @@ app.use(
   "/monitor",
   express.static(LOG_DIR_NAME, {
     //Get browser to display instead of download weird filenames, *.log.1
-    setHeaders: (res, path, stat) => {
+    setHeaders: (res) => {
       winstonLogger.debug("Getting monitored files for " + LOG_DIR_NAME);
       res.set("content-type", "text/plain; charset=UTF-8");
     },
   })
 );
-app.use(function (err, req, res, next) {
+app.use(function (err, req, res) {
   winstonLogger.info(err, req);
   res.status(200).send("An error has occured.");
 });
+
 winstonLogger.info("Splunk Forwarder started on host: " + SERVICE_IP + "  port: " + SERVICE_PORT);
 
 const generateTimeout = (attemptNumber) => {
@@ -214,7 +235,7 @@ const sendLog = async (payload) => {
 
     latestResponse = await response.status;
 
-    if (!!response.ok) {
+    if (response.ok) {
       //if the response is OK, eg. 200-level, log that the response was successful and exit
       winstonLogger.debug(`successfully reached ${SPLUNK_URL}! Response ${response.status}`);
       //return exits both the for loop and the entire sendLog() function here
@@ -239,96 +260,87 @@ const sendLog = async (payload) => {
 
 // get a log
 const getLog = (req) => {
-  return new Promise(
-    function (resolve, reject) {
-      var authorized = false;
+  return new Promise(function (resolve, reject) {
+    var authorized = false;
 
-      if (USE_AUTH && req.get("Authorization") === `Splunk ${SERVICE_AUTH_TOKEN}`) {
-        authorized = true;
-      }
-      if (authorized || !USE_AUTH) {
-        // extract stuff
-        const mess = safeStringify(req.body);
-        const host = req.get("host") || "?";
-        const logsource = req.get("logsource") || "?";
-        const fhost = req.get("http_x_forwarded_host") || "?";
-        const refNo = req.get("referenceNumber") || "?";
-        const applicationId = req.get("applicationId") || "?";
-        const name = req.get("name") || "?";
-        const tags = req.get("tags") || "?";
-        const program = req.get("program") || "?";
-        const times = req.get("timestamp") || "?";
-        const http_host = req.get("http_host") || "?";
-        const method = req.get("request_method") || "?";
-        const forwarded = req.get("http_x_forwarded_for") || "?";
-        const ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress || "?";
-        const browser = req.headers["user-agent"];
-        //todo: Verify! Screenshots showed severity_label.
-        const severity = req.get("severity") || "?"; //orig
-        const severityLabel = req.get("severity_label") || "?"; //from screenshot
-
-        const logString = `applicationId(${applicationId}) program(${program}) mess(${mess}) host(${host}) logsource(${logsource}) fhost(${fhost}) refNo(${refNo}) name(${name}) severity(${severity}) tags(${tags}) method(${method}) times(${times})  browser(${browser}) sourceIP(${ip}), http_host(${http_host}) http_x_forwarded_for(${forwarded}) pod(${HOST_NAME})`;
-
-        // write to local filesystem
-        if (!ONLY_LOG_WHEN_SPLUNK_FAILS && USE_SPLUNK) {
-          winstonLogger.info(logString);
-        }
-
-        if (!USE_SPLUNK) {
-          winstonLogger.info(logString);
-          return resolve("success");
-        } else {
-          // forward to splunk
-          var payload = {
-            message: {
-              applicationId: applicationId,
-              program: program,
-              log: mess,
-              times: times,
-              refNo: refNo,
-              name: name,
-              severity: severity,
-              tags: tags,
-              http_host: http_host,
-              method: method,
-              host: host,
-              pod: HOST_NAME,
-              forwardedHost: fhost,
-              forwarded: forwarded,
-              browserType: browser,
-              sourceIP: ip,
-              logsource: logsource,
-            },
-            // metadata: {
-            //    sourceIP: "TBD",
-            //    browserType: "TBD",
-            //    etc: "TBD"
-            //},
-            severity: "info",
-          };
-          winstonLogger.debug("sending payload");
-          sendLog(payload).catch((error) => {
-            winstonLogger.error("unable to send logs: ", error);
-            if (ONLY_LOG_WHEN_SPLUNK_FAILS) {
-              winstonLogger.info(logString);
-            }
-          });
-
-          winstonLogger.debug("sent payload");
-          resolve("success");
-        }
-      } else {
-        winstonLogger.info("unauthorized");
-        winstonLogger.debug("received with headers: ", req.headers);
-        reject("unauthorized");
-      }
-    },
-    function (err) {
-      winstonLogger.error("error: " + err);
-      // reject('unauthorized');
-      reject("something went wrong");
+    if (USE_AUTH && req.get("Authorization") === `Splunk ${SERVICE_AUTH_TOKEN}`) {
+      authorized = true;
     }
-  );
+    if (authorized || !USE_AUTH) {
+      // extract stuff
+      const mess = safeStringify(req.body);
+      const host = req.get("host") || "?";
+      const logsource = req.get("logsource") || "?";
+      const fhost = req.get("http_x_forwarded_host") || "?";
+      const refNo = req.get("referenceNumber") || "?";
+      const applicationId = req.get("applicationId") || "?";
+      const name = req.get("name") || "?";
+      const tags = req.get("tags") || "?";
+      const program = req.get("program") || "?";
+      const times = req.get("timestamp") || "?";
+      const http_host = req.get("http_host") || "?";
+      const method = req.get("request_method") || "?";
+      const forwarded = req.get("http_x_forwarded_for") || "?";
+      const ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress || "?";
+      const browser = req.headers["user-agent"];
+      const severity = req.get("severity") || "?"; //orig
+
+      const logString = `applicationId(${applicationId}) program(${program}) mess(${mess}) host(${host}) logsource(${logsource}) fhost(${fhost}) refNo(${refNo}) name(${name}) severity(${severity}) tags(${tags}) method(${method}) times(${times})  browser(${browser}) sourceIP(${ip}), http_host(${http_host}) http_x_forwarded_for(${forwarded}) pod(${HOST_NAME})`;
+
+      // write to local filesystem
+      if (!ONLY_LOG_WHEN_SPLUNK_FAILS && USE_SPLUNK) {
+        winstonLogger.info(logString);
+      }
+
+      if (!USE_SPLUNK) {
+        winstonLogger.info(logString);
+        return resolve("success");
+      } else {
+        // forward to splunk
+        var payload = {
+          message: {
+            applicationId: applicationId,
+            program: program,
+            log: mess,
+            times: times,
+            refNo: refNo,
+            name: name,
+            severity: severity,
+            tags: tags,
+            http_host: http_host,
+            method: method,
+            host: host,
+            pod: HOST_NAME,
+            forwardedHost: fhost,
+            forwarded: forwarded,
+            browserType: browser,
+            sourceIP: ip,
+            logsource: logsource,
+          },
+          // metadata: {
+          //    sourceIP: "TBD",
+          //    browserType: "TBD",
+          //    etc: "TBD"
+          //},
+          severity: "info",
+        };
+        winstonLogger.debug("sending payload");
+        sendLog(payload).catch((error) => {
+          winstonLogger.error("unable to send logs: ", error);
+          if (ONLY_LOG_WHEN_SPLUNK_FAILS) {
+            winstonLogger.info(logString);
+          }
+        });
+
+        winstonLogger.debug("sent payload");
+        resolve("success");
+      }
+    } else {
+      winstonLogger.info("unauthorized");
+      winstonLogger.debug("received with headers: ", req.headers);
+      reject("unauthorized");
+    }
+  });
 };
 
 exports.getLog = getLog;
