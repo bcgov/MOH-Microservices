@@ -5,16 +5,7 @@
     "prepare": "node ./.husky/install.mjs"
   },
   "devDependencies": {
-    "@vitest/eslint-plugin": "^1.1.36",
-    "eslint": "^9.22.0",
-    "eslint-config-prettier": "^10.1.1",
-    "eslint-plugin-compat": "^6.0.2",
     "husky": "^9.1.7",
-    "lint-staged": "^15.4.3",
-    "prettier": "^3.5.3"
-  },
-  "browserslist": [
-    "node 20",
-    "node 22"
-  ]
+    "lint-staged": "^15.4.3"
+  }  
 }
