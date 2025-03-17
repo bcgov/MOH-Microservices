@@ -1,7 +1,8 @@
 //This test server is used to return API responses in the dev environment
 //This simulates the real-life behavior of Splunk or Dynatrace, who ordinarily return 200 or 204 codes when logs are successfully submitted to them.
 
-const express = require("express");
+import express from "express";
+
 const app = express();
 
 const MOCK_LOGGER_PORT = 3000; //needs to match the SPLUNK_URL in start-local-service.sh

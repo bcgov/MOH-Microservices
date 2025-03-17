@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Forward log request to remove Splunk server",
   "license": "Apache-2.0",
+  "type": "module",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/bcgov/MOH-Microservices"

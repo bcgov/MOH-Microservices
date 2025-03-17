@@ -1,6 +1,5 @@
 import { tryServer } from "../test-helpers.js";
-
-const { exec } = require("node:child_process");
+import { exec } from "node:child_process";
 
 //these need to match the values in start-local-service.sh
 const monitorUsername = "monitorusername";

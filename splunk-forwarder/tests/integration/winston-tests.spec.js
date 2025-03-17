@@ -1,7 +1,7 @@
 import * as fs from "fs";
 import * as crypto from "crypto";
 import { tryServer, doesPathExist } from "../test-helpers.js";
-const { exec } = require("node:child_process");
+import { exec } from "node:child_process";
 
 //used to generate log commands and file names in tests
 const fileLogLevel = "debug"; //or info, error, etc
