@@ -1,18 +1,14 @@
 /*=============================================
 =                Dependencies                 =
 =============================================*/
-const winston = require("winston");
-const DailyRotateFile = require("winston-daily-rotate-file");
-const safeStringify = require("json-stringify-safe");
-const express = require("express");
-const app = express();
-const serveIndex = require("serve-index");
-const { Agent, fetch } = require("undici");
-
-// SplunkLogger
-// const SplunkLogger = require("./splunklogger");
-// const utils = require("./utils");
-const basicAuth = require("express-basic-auth");
+import winston from "winston";
+import DailyRotateFile from "winston-daily-rotate-file";
+import safeStringify from "json-stringify-safe";
+import express from "express";
+import serveIndex from "serve-index";
+import { Agent, fetch } from "undici";
+import basicAuth from "express-basic-auth";
+import { generateTimeout, checkEnvBoolean } from "./helpers.js";
 
 /*=============================================
 =      Environment Variable Configuration     =
@@ -26,12 +22,10 @@ const HOST_NAME = process.env.HOSTNAME || "?";
 const SERVICE_AUTH_TOKEN = process.env.SERVICE_AUTH_TOKEN || "NO_TOKEN";
 const SPLUNK_AUTH_TOKEN = process.env.SPLUNK_AUTH_TOKEN || null;
 const USE_SPLUNK = checkEnvBoolean(process.env.USE_SPLUNK);
-const USE_AUTH = checkEnvBoolean(process.env.SERVICE_USE_AUTH);
+const SERVICE_USE_AUTH = checkEnvBoolean(process.env.SERVICE_USE_AUTH);
 const ONLY_LOG_WHEN_SPLUNK_FAILS = checkEnvBoolean(process.env.ONLY_LOG_WHEN_SPLUNK_FAILS);
 const MONITOR_USERNAME = process.env.MONITOR_USERNAME || "";
 const MONITOR_PASSWORD = process.env.MONITOR_PASSWORD || "";
-
-//TODO: Verify empty string doesn't break requests. Value for Splunklogger has to be string, not null.
 const CA_CERT = process.env.CA_CERT || "";
 
 //Defaults to use 750mb total storage.
@@ -76,7 +70,7 @@ if (!process.env.LOG_DIR_NAME) {
 =            APPLICATION CONFIGURATION        =
 =============================================*/
 // turn off self-cert check
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+// process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 
 // Daily rotate file transport for logs
 var transport = {
@@ -100,28 +94,16 @@ var winstonLogger = new winston.createLogger({
   transports: [new winston.transports.Console(), new DailyRotateFile(transport)],
 });
 
-// winstonLogger.error = function (err, context) {
-//     winstonLogger.error(`SplunkLogger error:` + err + `  context:` + context);
-// };
-
 // remove console if not in debug mode
 if (FILE_LOG_LEVEL != "debug") {
   winston.remove(winston.transports.Console);
 }
 
-// var splunkLogger = new SplunkLogger({
-//     token: SPLUNK_AUTH_TOKEN,
-//     cacert: CA_CERT,
-//     level: 'info',
-//     url: SPLUNK_URL,
-//     maxRetries: RETRY_COUNT,
-// });
-// splunkLogger.requestOptions.strictSSL = false;
-
 /*=============================================
 =              Main Application               =
 =============================================*/
 // Init app
+const app = express();
 if (process.env.NODE_ENV != "production" || process.env.CORS_ALLOW_ALL == "true") {
   app.use(function (req, res, next) {
     res.header("Access-Control-Allow-Origin", "*");
@@ -129,6 +111,8 @@ if (process.env.NODE_ENV != "production" || process.env.CORS_ALLOW_ALL == "true"
     next();
   });
 }
+
+//lets us parse incoming request body with .json(), encode urls
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -151,8 +135,8 @@ app.post("/log", function (req, res) {
       return res.send(mess);
     })
     .catch(function (mess) {
-      res.status(200);
-      winstonLogger.error(mess);
+      res.status(500);
+      winstonLogger.error(`/log error occurred: ${mess}`);
       return res.send("An error has occured");
     });
 });
@@ -179,24 +163,14 @@ app.use(
     },
   })
 );
-app.use(function (err, req, res) {
-  winstonLogger.info(err, req);
-  res.status(200).send("An error has occured.");
-});
+//not sure I need this
+// app.use(function (err, req, res, next) {
+//   console.log("potato", err)
+//   winstonLogger.info(err, req);
+//   res.status(500).send("An error has occured.");
+// });
 
 winstonLogger.info("Splunk Forwarder started on host: " + SERVICE_IP + "  port: " + SERVICE_PORT);
-
-const generateTimeout = (attemptNumber) => {
-  //uses the loop number to generate an exponential timeout-- 1, 2, 4, 8, 16 seconds, etc
-  //measured in milliseconds, so 1000ms = 1 second of wait time
-  //For the first loop, 2 to the power of 0 equals 1, and 1 * 1000 ms = 1 second to start
-  //ceiling is 60 seconds between tries
-  let result = 1000 * 2 ** attemptNumber;
-  if (result > 60000) {
-    result = 60000;
-  }
-  return result;
-};
 
 const sendLog = async (payload) => {
   //format payload
@@ -263,10 +237,10 @@ const getLog = (req) => {
   return new Promise(function (resolve, reject) {
     var authorized = false;
 
-    if (USE_AUTH && req.get("Authorization") === `Splunk ${SERVICE_AUTH_TOKEN}`) {
+    if (SERVICE_USE_AUTH && req.get("Authorization") === `Splunk ${SERVICE_AUTH_TOKEN}`) {
       authorized = true;
     }
-    if (authorized || !USE_AUTH) {
+    if (authorized || !SERVICE_USE_AUTH) {
       // extract stuff
       const mess = safeStringify(req.body);
       const host = req.get("host") || "?";
@@ -342,9 +316,3 @@ const getLog = (req) => {
     }
   });
 };
-
-exports.getLog = getLog;
-
-function checkEnvBoolean(env) {
-  return env && env.toLowerCase() === "true";
-}
