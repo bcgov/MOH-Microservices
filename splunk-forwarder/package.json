@@ -23,7 +23,7 @@
     "test:lint": "eslint .",
     "lint": "eslint .",
     "format": "prettier . --write",
-    "prepare": "sh -c 'cd .. && node .husky/install.mjs'",
+    "prepare": "node bin/check-husky.mjs",
     "pre-commit": "lint-staged",
     "pre-commit:lint": "eslint",
     "pre-commit:prettier": "prettier --check --ignore-unknown"
