@@ -8,8 +8,10 @@ if (process.env.NODE_ENV === "production" || process.env.CI === "true") {
 const command = `sh -c 'cd .. && node .husky/install.mjs'`;
 exec(command, (error, stdout, stderr) => {
   console.log("(check-husky.mjs) check-husky results: ", stdout);
-  if (error) {
-    console.error(`(check-husky.mjs) Husky install execution error: ${error.message}`);
+  if (error || stderr) {
+    console.error(
+      `(check-husky.mjs) Husky install execution error: ${error.message ? error.message : stderr}`
+    );
     process.exit(1);
   }
 });
