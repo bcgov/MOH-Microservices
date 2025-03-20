@@ -70,7 +70,7 @@ if (!process.env.LOG_DIR_NAME) {
 =            APPLICATION CONFIGURATION        =
 =============================================*/
 // turn off self-cert check
-// process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 
 // Daily rotate file transport for logs
 var transport = {
