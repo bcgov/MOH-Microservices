@@ -1,0 +1,11 @@
+{
+  "name": "microservices",
+  "scripts": {
+    "pre-commit": "lint-staged",
+    "prepare": "node ./.husky/install.mjs"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^15.4.3"
+  }  
+}

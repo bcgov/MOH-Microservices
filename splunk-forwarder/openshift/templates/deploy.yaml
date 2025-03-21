@@ -157,7 +157,7 @@ objects:
                   value: ${RETRY_COUNT}
               resources:
                 limits:
-                #   cpu: 200m
+                  #   cpu: 200m
                   memory: 128Mi
                 requests:
                   cpu: 50m
@@ -188,7 +188,7 @@ parameters:
     description: Log level for pod
     displayName: LOG_LEVEL
     required: false
-    value: info 
+    value: info
   - name: SOURCE_IMAGE_NAME
     description: The name of the source image.
     displayName: Source Image Name
@@ -259,7 +259,7 @@ parameters:
     # value: (example) 'https://logdestination.com/ingest'
   - name: ONLY_LOG_WHEN_SPLUNK_FAILS
     description: Only log to local volume when connection to remote splunk fails
-    displayName: ONLY_LOG_WHEN_SPLUNK_FAILS 
+    displayName: ONLY_LOG_WHEN_SPLUNK_FAILS
     required: false
     value: "true"
   - name: RETRY_COUNT

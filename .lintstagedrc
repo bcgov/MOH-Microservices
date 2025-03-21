@@ -1,0 +1,4 @@
+{
+  "splunk-forwarder/**.{js,ts,jsx,tsx,vue,cjs}": ["sh -c 'cd splunk-forwarder && npm run pre-commit:lint'"],
+  "splunk-forwarder/**": ["sh -c 'cd splunk-forwarder && npm run pre-commit:prettier'"]
+}
