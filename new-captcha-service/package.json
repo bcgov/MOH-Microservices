@@ -7,7 +7,7 @@
     "build": "echo \"WARNING: No build script specified\" && exit 0",
     "start": "node src/index server",
     "dev": "nodemon --watch src --inspect=0.0.0.0:9229 --exec node ./src/index.js server",
-    "test": "echo \"WARNING: No test specified\" && exit 0",
+    "test": "vitest",
     "test:coverage": "echo \"WARNING: No test specified\" && exit 0",
     "test:lint": "echo \"WARNING: No LINTer specified\" && exit 0",
     "test:schema": "echo \"WARNING: No schema specified\" && exit 0",
