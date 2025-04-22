@@ -1,0 +1,47 @@
+{
+  "name": "new-captcha-service",
+  "version": "0.0.0",
+  "description": "A reusable, secure and reliable CAPTCHA microservice for service providers to use within online digital services.",
+  "type": "module",
+  "scripts": {
+    "build": "echo \"WARNING: No build script specified\" && exit 0",
+    "start": "node src/index server",
+    "dev": "nodemon --watch src --inspect=0.0.0.0:9229 --exec node ./src/index.js server",
+    "test": "echo \"WARNING: No test specified\" && exit 0",
+    "test:coverage": "echo \"WARNING: No test specified\" && exit 0",
+    "test:lint": "echo \"WARNING: No LINTer specified\" && exit 0",
+    "test:schema": "echo \"WARNING: No schema specified\" && exit 0",
+    "lint": "eslint .",
+    "format": "prettier . --write",
+    "pre-commit": "lint-staged",
+    "pre-commit:lint": "eslint",
+    "pre-commit:prettier": "prettier --check --ignore-unknown"
+  },
+  "dependencies": {
+    "express": "^5.1.0"
+  },
+  "devDependencies": {
+    "@vitest/eslint-plugin": "^1.1.43",
+    "eslint": "^9.25.1",
+    "eslint-config-prettier": "^10.1.2",
+    "eslint-plugin-compat": "^6.0.2",
+    "nodemon": "^3.1.9",
+    "prettier": "^3.5.3",
+    "vitest": "^3.1.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "browserslist": [
+    "node 20",
+    "node 22"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bcgov/MOH-Microservices.git"
+  },
+  "bugs": {
+    "url": "https://github.com/bcgov/MOH-Microservices/issues"
+  },
+  "homepage": "https://github.com/bcgov/MOH-Microservices/captcha-service#readme"
+}
