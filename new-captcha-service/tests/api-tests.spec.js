@@ -4,7 +4,7 @@ const { exec } = require("node:child_process");
 const captchaServiceURL = "http://localhost:3000";
 
 const startLocalService = () => {
-  exec("timeout 45s node src/index.js server", () => {
+  exec("timeout 5s node src/index server", () => {
     //err, stdout, stderr
   });
 };
@@ -45,8 +45,21 @@ describe("Start local servers, test APIs", async () => {
       })
   });
 
+  it("(Captcha service) Should respond with a 400 to the /captcha endpoint with incorrect nonce format", async () => {
+    const nonce = null;
+
+    await fetch(`${captchaServiceURL}/captcha`, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" }, // this line is important, if this content-type is not set it wont work
+      body: `nonce=${nonce}`
+    })
+      .then(function (response) {
+        expect(response.status).toBe(400);
+      })
+  });
+
   it("(Captcha service) Should respond with a 200 and properly formatted object to the /captcha endpoint", async () => {
-    const nonce = "1234567";
+    const nonce = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee";
     
     await fetch(`${captchaServiceURL}/captcha`, {
       method: "POST",
@@ -67,31 +80,31 @@ describe("Start local servers, test APIs", async () => {
         expect(data.nonce).toEqual(nonce);
 
         //Captcha
-        // expect(data.captcha).toBeTypeOf("string");
-        // expect(data.captcha).toContain(`<svg`); //should contain svg image
-        // expect(data.captcha).toContain(`/></svg>`);
-        // expect(data.captcha).toContain(`width=\"150\"`); //svg width and height should be fixed
-        // expect(data.captcha).toContain(`height=\"50\"`);
-        // expect(data.captcha).toContain(`viewBox=\"0,0,150,50\"`);
-        // expect(data.captcha.length).toBeGreaterThan(8000); //svgs are big
+        expect(data.captcha).toBeTypeOf("string");
+        expect(data.captcha).toContain(`<svg`); //should contain svg image
+        expect(data.captcha).toContain(`/></svg>`);
+        expect(data.captcha).toContain("width=\"150\""); //svg width and height should be fixed
+        expect(data.captcha).toContain("height=\"50\"");
+        expect(data.captcha).toContain("viewBox=\"0,0,150,50\"");
 
-        // expect(data.validation).toBeTypeOf("object");
+        expect(data.validation).toBeTypeOf("object");
 
-        // //Validation.protected
-        // expect(data.validation).toHaveProperty("protected");
-        // expect(data.validation.protected).toBeTypeOf("string");
+        //JWT formatting
+        //Validation.protected
+        expect(data.validation).toHaveProperty("protected");
+        expect(data.validation.protected).toBeTypeOf("string");
 
-        // //Validation.iv
-        // expect(data.validation).toHaveProperty("iv");
-        // expect(data.validation.iv).toBeTypeOf("string");
+        //Validation.iv
+        expect(data.validation).toHaveProperty("iv");
+        expect(data.validation.iv).toBeTypeOf("string");
 
-        // //Validation.ciphertext
-        // expect(data.validation).toHaveProperty("ciphertext");
-        // expect(data.validation.ciphertext).toBeTypeOf("string");
+        //Validation.ciphertext
+        expect(data.validation).toHaveProperty("ciphertext");
+        expect(data.validation.ciphertext).toBeTypeOf("string");
 
-        // //Validation.tag
-        // expect(data.validation).toHaveProperty("tag");
-        // expect(data.validation.tag).toBeTypeOf("string");
+        //Validation.tag
+        expect(data.validation).toHaveProperty("tag");
+        expect(data.validation.tag).toBeTypeOf("string");
       });
   });
   
