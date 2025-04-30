@@ -115,7 +115,6 @@ app.post("/captcha", async function (req, res) {
     return res.status(400).send({ reason: "Missing nonce" });
   }
 
-
   //regex for nonce
   //alphanumeric characters in groups of 8, 4, 4, 4, 12, with hyphens separating them
 

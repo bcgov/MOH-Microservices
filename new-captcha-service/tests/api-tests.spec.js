@@ -39,10 +39,9 @@ describe("Start local servers, test APIs", async () => {
   it("(Captcha service) Should respond with a 400 to the /captcha endpoint with no nonce", async () => {
     await fetch(`${captchaServiceURL}/captcha`, {
       method: "POST",
-    })
-      .then(function (response) {
-        expect(response.status).toBe(400);
-      })
+    }).then(function (response) {
+      expect(response.status).toBe(400);
+    });
   });
 
   it("(Captcha service) Should respond with a 400 to the /captcha endpoint with incorrect nonce format", async () => {
@@ -51,20 +50,19 @@ describe("Start local servers, test APIs", async () => {
     await fetch(`${captchaServiceURL}/captcha`, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" }, // this line is important, if this content-type is not set it wont work
-      body: `nonce=${nonce}`
-    })
-      .then(function (response) {
-        expect(response.status).toBe(400);
-      })
+      body: `nonce=${nonce}`,
+    }).then(function (response) {
+      expect(response.status).toBe(400);
+    });
   });
 
   it("(Captcha service) Should respond with a 200 and properly formatted object to the /captcha endpoint", async () => {
     const nonce = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee";
-    
+
     await fetch(`${captchaServiceURL}/captcha`, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" }, // this line is important, if this content-type is not set it wont work
-      body: `nonce=${nonce}`
+      body: `nonce=${nonce}`,
     })
       .then(function (response) {
         // The captcha returns a readable stream that needs to be parsed
@@ -73,7 +71,7 @@ describe("Start local servers, test APIs", async () => {
         return response.json();
       })
       .then(function (data) {
-        console.log("potato data", data)
+        console.log("potato data", data);
         // `data` is the parsed version of the JSON returned from the above
         //Nonce
         expect(data.nonce).toBeTypeOf("string");
@@ -83,9 +81,9 @@ describe("Start local servers, test APIs", async () => {
         expect(data.captcha).toBeTypeOf("string");
         expect(data.captcha).toContain(`<svg`); //should contain svg image
         expect(data.captcha).toContain(`/></svg>`);
-        expect(data.captcha).toContain("width=\"150\""); //svg width and height should be fixed
-        expect(data.captcha).toContain("height=\"50\"");
-        expect(data.captcha).toContain("viewBox=\"0,0,150,50\"");
+        expect(data.captcha).toContain('width="150"'); //svg width and height should be fixed
+        expect(data.captcha).toContain('height="50"');
+        expect(data.captcha).toContain('viewBox="0,0,150,50"');
 
         expect(data.validation).toBeTypeOf("object");
 
@@ -107,7 +105,7 @@ describe("Start local servers, test APIs", async () => {
         expect(data.validation.tag).toBeTypeOf("string");
       });
   });
-  
+
   it.skip("(Captcha service) Should respond with a 200 to the /verify/captcha endpoint", async () => {
     //this crashes the service for some reason so I'm skipping it
     const response = await fetch(`${captchaServiceURL}/verify/captcha`, {

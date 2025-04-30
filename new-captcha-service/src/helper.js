@@ -20,4 +20,3 @@ export const generateCaptcha = async () => {
 
   return captcha;
 };
-
