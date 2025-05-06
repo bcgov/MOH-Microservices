@@ -153,7 +153,7 @@ export const decryptJWE = async (body, private_key) => {
   try {
     let res = await JWK.asKey(private_key, "json");
     let decrypted = await JWE.createDecrypt(res).decrypt(body);
-    var decryptedObject = JSON.parse(decrypted.plaintext.toString("utf8"));
+    const decryptedObject = JSON.parse(decrypted.plaintext.toString("utf8"));
     winstonLogger.debug(`decrypted object: ${JSON.stringify(decryptedObject)}`);
     return decryptedObject;
   } catch (error) {
@@ -167,6 +167,7 @@ export const decryptJWE = async (body, private_key) => {
  * @return {boolean}
  */
 export const verifyIsJWE = (input) => {
+  //Should be an object
   if (typeof input !== "object") {
     winstonLogger.debug(
       `Can't parse incoming JWE. Not an Object. Received ${JSON.stringify(input)}`

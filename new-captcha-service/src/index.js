@@ -30,9 +30,43 @@ app.get("/status", function (req, res) {
   res.status(200).send("OK").end();
 });
 
-app.post("/captcha/audio", function (req, res) {
+app.post("/captcha/audio", async function (req, res) {
+  if (!Object.hasOwn(req.body, "validation") || !req.body.validation) {
+    winstonLogger.debug(
+      `Failed to verify request; missing validation property. Provided: ${JSON.stringify(req.body)}`
+    );
+    return res.status(400).send({ reason: "Incorrect validation format" });
+  }
+
+  if (!verifyIsJWE(req.body.validation)) {
+    winstonLogger.debug(
+      `Failed to decrypt captcha; not JWE format. Provided: ${JSON.stringify(req.body.validation)}`
+    );
+    return res.status(400).send({ reason: "Incorrect validation format" });
+  }
+
+  // Attempt decrypt
+  let decryptedRequest;
+  try {
+    decryptedRequest = await decryptJWE(req.body.validation, env.PRIVATE_KEY);
+  } catch (error) {
+    winstonLogger.debug(
+      `Can't decrypt incoming JWE. Received error: "${error}", input ${JSON.stringify(req.body.validation)}`
+    );
+    return res.status(500).send("Failed to decrypt captcha");
+  }
+
+  if (!decryptedRequest) {
+    winstonLogger.error(`Failed to decrypt captcha. `);
+    return res.status(500).send("Failed to decrypt captcha");
+  }
+
+  winstonLogger.debug(`verifyCaptcha decrypted ${JSON.stringify(decryptedRequest)}`);
+
+  console.log("answer", decryptedRequest.answer);
+
   let response = {};
-  return res.send(response);
+  return res.status(503).send(response);
 });
 
 app.post("/captcha", async function (req, res) {
@@ -111,7 +145,6 @@ app.post("/verify/captcha", async function (req, res) {
   }
 
   // Otherwise prepare to attempt decrypt
-
   if (!Object.hasOwn(req.body, "validation") || !req.body.validation) {
     winstonLogger.debug(
       `Failed to verify request; missing validation property. Provided: ${JSON.stringify(req.body)}`
@@ -127,7 +160,15 @@ app.post("/verify/captcha", async function (req, res) {
   }
 
   // Attempt decrypt
-  const decryptedRequest = await decryptJWE(req.body.validation, env.PRIVATE_KEY);
+  let decryptedRequest;
+  try {
+    decryptedRequest = await decryptJWE(req.body.validation, env.PRIVATE_KEY);
+  } catch (error) {
+    winstonLogger.debug(
+      `Can't decrypt incoming JWE. Received error: "${error}", input ${JSON.stringify(req.body.validation)}`
+    );
+    return res.status(500).send("Failed to decrypt captcha");
+  }
 
   if (!decryptedRequest) {
     winstonLogger.error(`Failed to decrypt captcha. `);
