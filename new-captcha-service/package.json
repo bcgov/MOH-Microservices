@@ -20,8 +20,10 @@
   },
   "dependencies": {
     "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
     "node-jose": "^2.2.0",
-    "svg-captcha": "^1.4.0"
+    "svg-captcha": "^1.4.0",
+    "winston": "^3.17.0"
   },
   "devDependencies": {
     "@vitest/eslint-plugin": "^1.1.43",

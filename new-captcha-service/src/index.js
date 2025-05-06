@@ -1,104 +1,33 @@
 import express from "express";
-import { generateDate, generateCaptcha } from "./helper.js";
-import pkg from "node-jose";
-const { JWE, JWK, JWS } = pkg;
-
-//Environment variables
-const SERVICE_PORT = 3000;
-const CAPTCHA_SIGN_EXPIRY = 180;
-//this is a test key for development purposes. Don't use in production
-const PRIVATE_KEY = `{
-  "kty": "oct",
-  "kid": "gBdaS-G8RLax2qObTD94w",
-  "use": "enc",
-  "alg": "A256GCM",
-  "k": "FK3d8WvSRdxlUHs4Fs_xxYO3-6dCiUarBwiYNFw5hv8"
-}`;
-const SECRET = "defaultSecret";
-const LOG_LEVEL = "info";
+import * as env from "./env.js";
+import {
+  verifyPrivateKey,
+  verifyIncomingNonce,
+  generateCaptcha,
+  signObject,
+  winstonLogger,
+  decryptJWE,
+  encryptJWE,
+  verifyIsJWE,
+} from "./helper.js";
 
 //verify PRIVATE_KEY
-try {
-  JSON.parse(PRIVATE_KEY);
-} catch (error) {
-  console.log(
-    `${generateDate()}`,
-    "winston error: Failed to parse PRIVATE_KEY: ",
-    JSON.stringify(error)
-  );
-  throw Error(`PRIVATE_KEY invalid (must be valid JSON, received ${PRIVATE_KEY})`);
-}
-
-let parsedKey = JSON.parse(PRIVATE_KEY);
-
-if (!Object.prototype.hasOwnProperty.call(parsedKey, "kty")) {
-  throw Error(`PRIVATE_KEY isn't a valid JWK (missing "kty" property, received ${PRIVATE_KEY})`);
-}
-
-if (!Object.prototype.hasOwnProperty.call(parsedKey, "use")) {
-  throw Error(`PRIVATE_KEY isn't a valid JWK (missing "use" property, received ${PRIVATE_KEY})`);
-}
-
-if (!Object.prototype.hasOwnProperty.call(parsedKey, "alg")) {
-  throw Error(`PRIVATE_KEY isn't a valid JWK (missing "alg" property, received ${PRIVATE_KEY})`);
-}
-
-if (!Object.prototype.hasOwnProperty.call(parsedKey, "k")) {
-  throw Error(`PRIVATE_KEY isn't a valid JWK (missing "k" property, received ${PRIVATE_KEY})`);
-}
-
-if (parsedKey.kty !== "oct") {
-  throw Error(
-    `Please check your PRIVATE_KEY and try again ("kty" needs to equal "oct" for symmetrical encryption. Received ${PRIVATE_KEY})`
-  );
-}
-
-if (parsedKey.use !== "enc") {
-  throw Error(
-    `Please check your PRIVATE_KEY and try again (This microservice uses symmetrical encryption, which means "use" needs to equal "enc". Received ${PRIVATE_KEY})`
-  );
-}
+verifyPrivateKey(env.PRIVATE_KEY); //this function stops the service if the private key is malformed
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-console.log(
-  `${generateDate()} winston info: MyGov Captcha Service listening at http://localhost:${SERVICE_PORT}`
-);
-console.log(`${generateDate()} winston info: Log level is at: ${LOG_LEVEL}`);
-
-const encryptJWE = async (nonce, captcha) => {
-  const body = {
-    nonce,
-    answer: captcha.text,
-    expiry: Date.now() + CAPTCHA_SIGN_EXPIRY * 60000,
-  };
-
-  console.log(`${generateDate()}`, "winston debug: to encrypt ", JSON.stringify(body));
-
-  let buff = Buffer.from(JSON.stringify(body));
-  try {
-    let result = await JWE.createEncrypt(JSON.parse(PRIVATE_KEY)).update(buff).final();
-    console.log(`${generateDate()}`, "winston debug: encrypted ", JSON.stringify(result));
-    return result;
-  } catch (error) {
-    console.log(
-      `${generateDate()}`,
-      "winston error: Failed to encrypt JWE: ",
-      JSON.stringify(error)
-    );
-    throw error;
-  }
-};
+winstonLogger.info(`MyGov Captcha Service listening at http://localhost:${env.SERVICE_PORT}`);
+winstonLogger.info(`Log level is at: ${env.LOG_LEVEL}`);
 
 // health and readiness check
 app.get("/hello", function (req, res) {
-  res.status(200).end();
+  res.status(200).send("OK").end();
 });
 
 app.get("/status", function (req, res) {
-  res.send("OK");
+  res.status(200).send("OK").end();
 });
 
 app.post("/captcha/audio", function (req, res) {
@@ -107,26 +36,18 @@ app.post("/captcha/audio", function (req, res) {
 });
 
 app.post("/captcha", async function (req, res) {
-  console.log(`${generateDate()} winston debug: /captcha body: `, req.body);
-
   //check nonce is formatted correctly, return error if it's not
-  if (!req.body || !Object.hasOwn(req.body, "nonce") || !req.body.nonce) {
-    console.log(`${generateDate()}`, "winston debug: Failed to generate captcha; no nonce.");
+
+  if (!req || !req.body || !Object.hasOwn(req.body, "nonce") || !req.body.nonce) {
+    winstonLogger.debug(`Failed to generate captcha; no nonce.`);
     return res.status(400).send({ reason: "Missing nonce" });
   }
 
-  //regex for nonce
-  //alphanumeric characters in groups of 8, 4, 4, 4, 12, with hyphens separating them
+  winstonLogger.debug(`/captcha body: ${JSON.stringify(req.body)}`);
 
-  const regex = RegExp(
-    "^[a-zA-Z0-9]{8}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{12}$"
-  );
-  const matchString = req.body.nonce.toString();
-
-  if (!regex.test(matchString)) {
-    console.log(
-      `${generateDate()}`,
-      "winston debug: Failed to generate captcha; nonce does not match format of 8-4-4-4-12 alphanumeric characters."
+  if (!verifyIncomingNonce(req.body.nonce)) {
+    winstonLogger.debug(
+      `Failed to generate captcha; nonce does not match expected format. Provided: ${req.body.nonce}`
     );
     return res.status(400).send({ reason: "Incorrect nonce format" });
   }
@@ -135,43 +56,123 @@ app.post("/captcha", async function (req, res) {
   const captcha = await generateCaptcha();
 
   if (!captcha || (captcha && !captcha.data)) {
-    // Something bad happened with Captcha.
-    console.log(
-      `${generateDate()}`,
-      "winston debug: Failed to generate captcha; svgCaptcha action failed."
-    );
+    // Something bad happened with captcha generation.
+    winstonLogger.error(`Failed to generate captcha; svgCaptcha action failed.`);
     return res.status(500).send({ reason: "Failed to generate captcha, please try again" });
   }
 
-  let jwt;
+  //If the captcha image generated successfully, then we're ready to prepare it for the user
+  //We'll put it in a JSON object along with an encrypted JWE token, which contains the real captcha answer in a format the user can't read
+  //Then when the user submits the answer, we'll decrypt the JWE and compare the expected answer with what the user submitted
 
+  let encryptedData;
   try {
-    jwt = await encryptJWE(req.body.nonce, captcha);
+    encryptedData = await encryptJWE(req.body.nonce, captcha);
   } catch (error) {
-    console.log(
-      `${generateDate()}`,
-      "winston error: Failed to encrypt JWE: ",
-      JSON.stringify(error)
-    );
+    winstonLogger.error(`Failed to encrypt JWE: ${JSON.stringify(error)}`);
     return res.status(500).send({ reason: "Failed to generate captcha, please try again" });
   }
 
   const payload = {
     nonce: req.body.nonce,
     captcha: captcha.data,
-    validation: jwt,
+    validation: encryptedData,
   };
 
   return res.status(200).send(payload);
 });
 
-app.post("/verify/captcha", function (req, res) {
-  let response = {};
-  return res.status(200).send(response);
+app.post("/verify/captcha", async function (req, res) {
+  if (!req || !req.body || !Object.hasOwn(req.body, "nonce") || !req.body.nonce) {
+    winstonLogger.debug(`Failed to verify captcha; no nonce.`);
+    return res.status(400).send({ reason: "Missing nonce" });
+  }
+
+  if (!verifyIncomingNonce(req.body.nonce)) {
+    winstonLogger.debug(
+      `Failed to verify request; nonce does not match expected format. Provided: ${req.body.nonce}`
+    );
+    return res.status(400).send({ reason: "Incorrect nonce format" });
+  }
+
+  //If Bypass_Answer is set and user input matches, pass the captcha test
+  if (env.BYPASS_ANSWER && env.BYPASS_ANSWER.length > 0 && env.BYPASS_ANSWER === req.body.answer) {
+    winstonLogger.debug(`Captcha bypassed! Creating JWT.`);
+
+    const result = await signObject(req.body.nonce, env.SECRET, env.JWT_SIGN_EXPIRY);
+
+    if (!result) {
+      winstonLogger.error(`Failed to sign JWT. `);
+      return res.status(500).send("Failed to verify captcha, please try again");
+    }
+
+    winstonLogger.debug(`Created JWT: ${JSON.stringify(result)} `);
+    return res.status(200).send(result);
+  }
+
+  // Otherwise prepare to attempt decrypt
+
+  if (!Object.hasOwn(req.body, "validation") || !req.body.validation) {
+    winstonLogger.debug(
+      `Failed to verify request; missing validation property. Provided: ${JSON.stringify(req.body)}`
+    );
+    return res.status(400).send({ reason: "Incorrect validation format" });
+  }
+
+  if (!verifyIsJWE(req.body.validation)) {
+    winstonLogger.debug(
+      `Failed to decrypt captcha; not JWE format. Provided: ${JSON.stringify(req.body.validation)}`
+    );
+    return res.status(400).send({ reason: "Incorrect validation format" });
+  }
+
+  // Attempt decrypt
+  const decryptedRequest = await decryptJWE(req.body.validation, env.PRIVATE_KEY);
+
+  if (!decryptedRequest) {
+    winstonLogger.error(`Failed to decrypt captcha. `);
+    return res.status(500).send("Failed to decrypt captcha");
+  }
+
+  winstonLogger.debug(`verifyCaptcha decrypted ${JSON.stringify(decryptedRequest)}`);
+
+  if (decryptedRequest.expiry < Date.now()) {
+    winstonLogger.debug(`Captcha expired: ${decryptedRequest.expiry},  now: ${Date.now()}`);
+    return res.status(400).send("Captcha expired");
+  }
+
+  if (decryptedRequest.nonce !== req.body.nonce) {
+    winstonLogger.debug(
+      `Nonce incorrect, expected: ${decryptedRequest.nonce}, provided ${req.body.nonce}`
+    );
+    return res.status(400).send("Invalid submission");
+  }
+
+  if (decryptedRequest.answer.toLowerCase() !== req.body.answer.toLowerCase()) {
+    winstonLogger.debug(
+      `Captcha answer incorrect, expected: ${decryptedRequest.answer}, provided ${req.body.answer}`
+    );
+    return res.status(400).send("Invalid submission");
+  }
+
+  //If the captcha verifies correctly, then we return a signed JWT with the nonce and an expiry
+  //The msp-service will check for this JWT before it allows API calls to submit forms
+
+  winstonLogger.debug(`Captcha verified! Creating JWT ${JSON.stringify(decryptedRequest)}`);
+
+  const result = await signObject(req.body.nonce, env.SECRET, env.JWT_SIGN_EXPIRY);
+
+  if (!result) {
+    winstonLogger.error(`Failed to sign JWT. `);
+    return res.status(500).send("Failed to sign JWT");
+  }
+
+  winstonLogger.debug(`Created JWT: ${JSON.stringify(result)} `);
+  return res.status(200).send(result);
 });
 
 app.get("/", (req, res) => {
   return res.status(200).send("Hello world");
 });
 
-app.listen(SERVICE_PORT);
+app.listen(env.SERVICE_PORT);
