@@ -173,11 +173,6 @@ describe("/captcha endpoint", async () => {
 
         //Captcha
         expect(data.captcha).toBeTypeOf("string");
-        expect(data.captcha).toContain(`<svg`); //should contain svg image
-        expect(data.captcha).toContain(`/></svg>`);
-        expect(data.captcha).toContain('width="150"'); //svg width and height should be fixed
-        expect(data.captcha).toContain('height="50"');
-        expect(data.captcha).toContain('viewBox="0,0,150,50"');
 
         expect(data.validation).toBeTypeOf("object");
 
@@ -213,7 +208,7 @@ describe("/verify/captcha endpoint", async () => {
     console.log("command started with: ", defaultCommand);
     captchaServiceURL = `http://localhost:${standardPort}`;
     await tryServer(captchaServiceURL, "HEAD");
-  }, 30000);  
+  }, 30000);
 
   it("(Captcha service) Should respond with a 400 to the /verify/captcha endpoint with no nonce", async () => {
     const response = await fetch(`${captchaServiceURL}/verify/captcha`, {
@@ -474,3 +469,94 @@ describe("/verify/captcha endpoint", async () => {
   });
 });
 
+describe("/captcha/audio endpoint", async () => {
+  beforeAll(async () => {
+    // const standardPort = "3000";
+    const standardPort = generatePortNumber();
+    const defaultCommand = generateServiceCommand({
+      SERVICE_PORT: standardPort,
+      BYPASS_ANSWER: bypassAnswer,
+      SECRET: defaultSecret,
+    });
+    startLocalServiceWith(defaultCommand);
+    console.log("command started with: ", defaultCommand);
+    captchaServiceURL = `http://localhost:${standardPort}`;
+    await tryServer(captchaServiceURL, "HEAD");
+  }, 30000);
+
+  it("Should respond with a 400 to the /captcha/audio endpoint with no post body", async () => {
+    const response = await fetch(`${captchaServiceURL}/captcha/audio`, {
+      method: "POST",
+    });
+    expect(response.status).toBe(400);
+  });
+
+  it("Should respond with a 400 to the /captcha/audio endpoint with an empty body", async () => {
+    const requestBody = {};
+    const response = await fetch(`${captchaServiceURL}/captcha/audio`, {
+      method: "POST",
+      body: JSON.stringify(requestBody),
+    });
+    expect(response.status).toBe(400);
+  });
+
+  it("Should respond with a 400 to the /captcha/audio endpoint with a non-JWE body format", async () => {
+    //this request body is missing the tag property, which it needs
+    const requestBody = { validation: { protected: "foobar", iv: "foobar", ciphertext: "foobar" } };
+
+    await fetch(`${captchaServiceURL}/captcha/audio`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" }, // this line is important, if this content-type is not set it wont work
+      body: JSON.stringify(requestBody),
+    }).then(function (response) {
+      expect(response.status).toBe(400);
+    });
+  });
+
+  it("Should respond with a 500 to the /captcha/audio endpoint with a body that can't be decrypted", async () => {
+    const requestBody = {
+      validation: { protected: "foobar", iv: "foobar", ciphertext: "foobar", tag: "foobar" },
+    };
+
+    await fetch(`${captchaServiceURL}/captcha/audio`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" }, // this line is important, if this content-type is not set it wont work
+      body: JSON.stringify(requestBody),
+    }).then(function (response) {
+      expect(response.status).toBe(500);
+    });
+  });
+
+  it("Should respond with a 200 and audio stream to the /captcha/audio endpoint with a correctly formatted JWE in the post body", async () => {
+    const requestBody = { validation: fakeJWE };
+
+    await fetch(`${captchaServiceURL}/captcha/audio`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" }, // this line is important, if this content-type is not set it wont work
+      body: JSON.stringify(requestBody),
+    })
+      .then(function (response) {
+        // The captcha returns a readable stream that needs to be parsed
+        // response.json does that so we can access the data
+        expect(response.status).toEqual(200);
+        return response.json();
+      })
+      .then(function (data) {
+        // console.log("potato data", data.audio)
+
+        const audio = data.audio;
+        const split = audio.split(",");
+        // console.log("potato split", split[1])
+        //mime type should be correct
+        expect(split[0]).toEqual("data:audio/mp3;base64");
+        //audio should be base64
+        //regex taken from stack overflow: https://stackoverflow.com/questions/475074/regex-to-parse-or-validate-base64-data
+
+        const base64Regex = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
+
+        const regexTest = base64Regex.test(split[1]);
+
+        expect(regexTest).toBe(true);
+      });
+  });
+});

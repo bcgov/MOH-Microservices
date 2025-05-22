@@ -65,7 +65,7 @@ export const generateServiceCommand = (override) => {
 
   Object.assign(options, override);
 
-  return `SERVICE_PORT=${options.SERVICE_PORT} CAPTCHA_SIGN_EXPIRY=${options.CAPTCHA_SIGN_EXPIRY} PRIVATE_KEY=${options.PRIVATE_KEY} SECRET=${options.SECRET} BYPASS_ANSWER=${options.BYPASS_ANSWER} JWT_SIGN_EXPIRY=${options.JWT_SIGN_EXPIRY} LOG_LEVEL=${options.LOG_LEVEL}  timeout ${options.timeout} node src/index.js server`;
+  return `SERVICE_PORT=${options.SERVICE_PORT} CAPTCHA_SIGN_EXPIRY=${options.CAPTCHA_SIGN_EXPIRY} PRIVATE_KEY='${options.PRIVATE_KEY}' SECRET=${options.SECRET} BYPASS_ANSWER=${options.BYPASS_ANSWER} JWT_SIGN_EXPIRY=${options.JWT_SIGN_EXPIRY} LOG_LEVEL=${options.LOG_LEVEL}  timeout ${options.timeout} node src/index.js server`;
 };
 
 export const startLocalServiceWith = async (command) => {

@@ -5,6 +5,7 @@ import * as winston from "winston";
 const { combine, timestamp, align, printf } = winston.format;
 import pkg from "node-jose";
 const { JWE, JWK } = pkg;
+import * as lamejs from "@breezystack/lamejs";
 
 export const winstonLogger = winston.createLogger({
   level: env.LOG_LEVEL,
@@ -63,6 +64,8 @@ export const verifyPrivateKey = (privateKey) => {
       `Please check your PRIVATE_KEY and try again (This microservice uses symmetrical encryption, which means "use" needs to equal "enc". Received ${privateKey})`
     );
   }
+
+  return true;
 };
 
 /**
@@ -80,6 +83,20 @@ export const verifyIncomingNonce = (nonce) => {
   const matchString = nonce.toString();
 
   return regex.test(matchString);
+};
+
+export const verifyJwtExpiry = (expiry) => {
+  if (typeof expiry !== "string") {
+    winstonLogger.error(`Invalid jwt expiry format. Received: ${expiry}`);
+    throw Error(`Invalid jwt expiry format; must be string. Received: ${expiry}`);
+  }
+
+  if (isNaN(parseInt(expiry))) {
+    winstonLogger.error(`Invalid jwt expiry format. Received: ${expiry}`);
+    throw Error(`Invalid jwt expiry format; must be parseable to a number. Received: ${expiry}`);
+  }
+
+  return true;
 };
 
 export const generateCaptcha = async () => {
@@ -101,6 +118,9 @@ export const generateCaptcha = async () => {
  * @return {object}
  */
 export const signObject = async (nonce, secret, expiry) => {
+  if (!nonce || !secret || !expiry) {
+    return false;
+  }
   const token = jwt.sign(
     {
       data: {
@@ -121,20 +141,44 @@ export const signObject = async (nonce, secret, expiry) => {
 /**
  * @param {string|number} nonce
  * @param {object} captcha
+ * @param {string} privateKey
+ * @param {string|number} expiry
  * @return {object}
  */
-export const encryptJWE = async (nonce, captcha) => {
+export const encryptJWE = async (nonce, captcha, privateKey, expiry) => {
+  if (!nonce || !captcha || !captcha.text || !privateKey || !expiry) {
+    winstonLogger.debug(
+      `Missing expected arguments. Nonce: ${nonce}, Captcha: ${captcha}, Private key: ${privateKey}, Expiry: ${expiry}`
+    );
+    return false;
+  }
+
+  if (!verifyPrivateKey(privateKey)) {
+    winstonLogger.debug(`Private key didn't pass verifyPrivateKey check. Received: ${privateKey}`);
+    return false;
+  }
+
+  try {
+    if (!verifyJwtExpiry(expiry)) {
+      winstonLogger.debug(`Invalid expiry format. Must be number. Received: ${expiry}`);
+      return false;
+    }
+  } catch {
+    winstonLogger.debug(`Invalid expiry format. Must be number. Received: ${expiry}`);
+    return false;
+  }
+
   const body = {
     nonce,
     answer: captcha.text,
-    expiry: Date.now() + env.CAPTCHA_SIGN_EXPIRY * 60000,
+    expiry: Date.now() + parseInt(expiry) * 60000,
   };
 
   winstonLogger.debug(`to encrypt ${JSON.stringify(body)}`);
 
   let buff = Buffer.from(JSON.stringify(body));
   try {
-    let result = await JWE.createEncrypt(JSON.parse(env.PRIVATE_KEY)).update(buff).final();
+    let result = await JWE.createEncrypt(JSON.parse(privateKey)).update(buff).final();
     winstonLogger.debug(`encrypted ${JSON.stringify(result)}`);
     return result;
   } catch (error) {
@@ -145,13 +189,18 @@ export const encryptJWE = async (nonce, captcha) => {
 
 /**
  * @param {object} body
- * @param {object} private_key
+ * @param {object} privateKey
  * @return {object}
  */
-export const decryptJWE = async (body, private_key) => {
+export const decryptJWE = async (body, privateKey) => {
+  if (!body || !privateKey) {
+    winstonLogger.debug(`Missing expected arguments. Body: ${body}, Private key: ${privateKey}`);
+    return false;
+  }
+
   winstonLogger.debug(`to decrypt: ${JSON.stringify(body)}`);
   try {
-    let res = await JWK.asKey(private_key, "json");
+    let res = await JWK.asKey(privateKey, "json");
     let decrypted = await JWE.createDecrypt(res).decrypt(body);
     const decryptedObject = JSON.parse(decrypted.plaintext.toString("utf8"));
     winstonLogger.debug(`decrypted object: ${JSON.stringify(decryptedObject)}`);
@@ -205,4 +254,59 @@ export const verifyIsJWE = (input) => {
   }
 
   return true;
+};
+
+const uintToArrayBuffer = (array) => {
+  return array.buffer.slice(array.byteOffset, array.byteLength + array.byteOffset);
+};
+
+export const convertWavToMp3 = async (wav) => {
+  return new Promise((resolve, reject) => {
+    // const arrayBuffer = this.result;
+    const arrayBuffer = uintToArrayBuffer(wav);
+
+    // Create a WAV decoder
+    const wavDecoder = lamejs.WavHeader.readHeader(new DataView(arrayBuffer));
+
+    // Get the WAV audio data as an array of samples
+    const wavSamples = new Int16Array(arrayBuffer, wavDecoder.dataOffset, wavDecoder.dataLen / 2);
+
+    // Create an MP3 encoder
+    const mp3Encoder = new lamejs.Mp3Encoder(wavDecoder.channels, wavDecoder.sampleRate, 128);
+
+    // Encode the WAV samples to MP3
+    const mp3Buffer = mp3Encoder.encodeBuffer(wavSamples);
+
+    // Finalize the MP3 encoding
+    const mp3Data = mp3Encoder.flush();
+
+    // Combine the MP3 header and data into a new ArrayBuffer
+    const mp3BufferWithHeader = new Uint8Array(mp3Buffer.length + mp3Data.length);
+    mp3BufferWithHeader.set(mp3Buffer, 0);
+    mp3BufferWithHeader.set(mp3Data, mp3Buffer.length);
+
+    //return ArrayBuffer
+    resolve(mp3BufferWithHeader);
+    // };
+
+    // reader.onerror = function (error) {
+    // reject(error);
+    // };
+  });
+};
+
+/**
+ * @param {string} input
+ * @return {string}
+ */
+export const getSpacedAnswer = (answer) => {
+  let result = [];
+  for (let i = 0; i < answer.length; i++) {
+    result.push(answer[i]);
+    //changing the punctuation changes how the captcha sounds
+    //alternatives include : and ,
+    result.push("; ");
+  }
+  console.log("result: ", result);
+  return result.toString();
 };

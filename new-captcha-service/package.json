@@ -19,10 +19,12 @@
     "send-test-captcha-request": "bin/send-test-captcha-request.sh"
   },
   "dependencies": {
+    "@breezystack/lamejs": "^1.2.7",
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
     "node-jose": "^2.2.0",
     "svg-captcha": "^1.4.0",
+    "text2wav": "^0.0.14",
     "winston": "^3.17.0"
   },
   "devDependencies": {
