@@ -373,4 +373,81 @@ describe("decryptJWE()", async () => {
     expect(result.expiry).toBeTypeOf("number");
     expect(result.nonce).toBeTypeOf("string");
   });
+
+  it("Should return false when passed non-JWE string", async () => {
+    const result = await decryptJWE("foobar");
+    expect(result).toBe(false);
+  });
+
+  it("Should return false when passed non-JWE object", async () => {
+    const result = await decryptJWE({ foobar: "foobar" });
+    expect(result).toBe(false);
+  });
+});
+
+describe("verifyIsJWE()", async () => {
+  it("Should return false when passed no parameters", async () => {
+    const result = await verifyIsJWE();
+    expect(result).toBe(false);
+  });
+
+  it("Should return false when passed a string", async () => {
+    const result = await verifyIsJWE("foobar");
+    expect(result).toBe(false);
+  });
+
+  it("Should return false when passed an empty object", async () => {
+    const result = await verifyIsJWE({});
+    expect(result).toBe(false);
+  });
+
+  it("Should return true when passed an object with JWE properties", async () => {
+    const result = await verifyIsJWE({
+      protected: "foobar",
+      iv: "foobar",
+      ciphertext: "foobar",
+      tag: "foobar",
+    });
+    expect(result).toBe(true);
+  });
+
+  it("Should return false when passed an object missing the 'protected' property", async () => {
+    const result = await verifyIsJWE({
+      // protected: "foobar", //should be commented out for this test
+      iv: "foobar",
+      ciphertext: "foobar",
+      tag: "foobar",
+    });
+    expect(result).toBe(false);
+  });
+
+  it("Should return false when passed an object missing the 'iv' property", async () => {
+    const result = await verifyIsJWE({
+      protected: "foobar",
+      // iv: "foobar", //should be commented out for this test
+      ciphertext: "foobar",
+      tag: "foobar",
+    });
+    expect(result).toBe(false);
+  });
+
+  it("Should return false when passed an object missing the 'ciphertext' property", async () => {
+    const result = await verifyIsJWE({
+      protected: "foobar",
+      iv: "foobar",
+      // ciphertext: "foobar", //should be commented out for this test
+      tag: "foobar",
+    });
+    expect(result).toBe(false);
+  });
+
+  it("Should return false when passed an object missing the 'tag' property", async () => {
+    const result = await verifyIsJWE({
+      protected: "foobar",
+      iv: "foobar",
+      ciphertext: "foobar",
+      // tag: "foobar" //should be commented out for this test
+    });
+    expect(result).toBe(false);
+  });
 });
