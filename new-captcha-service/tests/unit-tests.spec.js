@@ -7,9 +7,12 @@ import {
   decryptJWE,
   encryptJWE,
   verifyIsJWE,
+  verifyMp3Integrity,
   convertWavToMp3,
   getSpacedAnswer,
 } from "../src/helper.js";
+import * as path from "path";
+import fs from "fs";
 
 describe("verifyPrivateKey()", async () => {
   it("Should not throw error when passed properly formatted object", async () => {
@@ -449,5 +452,60 @@ describe("verifyIsJWE()", async () => {
       // tag: "foobar" //should be commented out for this test
     });
     expect(result).toBe(false);
+  });
+});
+
+describe("(test helper function) verifyMp3Integrity()", async () => {
+  let testmp3;
+  testmp3 = fs.readFileSync(path.resolve(__dirname, "./fixtures", "testmp3.mp3"));
+
+  it("Should successfully read local test files", async () => {
+    expect(testmp3).not.toBeUndefined();
+  });
+
+  it("Should return false when passed no parameters", async () => {
+    const result = await verifyMp3Integrity();
+    expect(result).toBe(false);
+  });
+
+  it("Should return false when passed an invalid mp3 file", async () => {
+    const result = await verifyMp3Integrity("foobar");
+    expect(result).toBe(false);
+  });
+
+  it("Should return true when passed a valid mp3 file", async () => {
+    const result = await verifyMp3Integrity(testmp3);
+    expect(result).toBe(true);
+  });
+
+  it("Should return true when passed a valid mp3 buffer", async () => {
+    const buffer = Buffer.from(testmp3);
+    const result = await verifyMp3Integrity(buffer);
+    expect(result).toBe(true);
+  });
+});
+
+describe("convertWavToMp3()", async () => {
+  let testWav;
+  testWav = fs.readFileSync(path.resolve(__dirname, "./fixtures", "testwav.wav"));
+
+  it("Should successfully read local test files", async () => {
+    expect(testWav).not.toBeUndefined();
+  });
+
+  it("Should return false when not passed input", async () => {
+    const result = await convertWavToMp3();
+    expect(result).toBe(false);
+  });
+
+  it("Should throw an error when passed an invalid wav file", async () => {
+    await expect(convertWavToMp3("foobar")).rejects.toThrowError();
+  });
+
+  it("Should return a valid mp3 when passed a valid wav", async () => {
+    const mp3 = await convertWavToMp3(testWav);
+    expect(typeof mp3).toBe("object");
+    const mp3Check = await verifyMp3Integrity(mp3);
+    expect(mp3Check).toBe(true);
   });
 });

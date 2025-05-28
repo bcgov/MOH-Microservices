@@ -6,6 +6,8 @@ const { combine, timestamp, align, printf } = winston.format;
 import pkg from "node-jose";
 const { JWE, JWK } = pkg;
 import * as lamejs from "@breezystack/lamejs";
+import { spawnSync } from "node:child_process";
+import pathToFfmpeg from "ffmpeg-static";
 
 export const winstonLogger = winston.createLogger({
   level: env.LOG_LEVEL,
@@ -261,32 +263,46 @@ const uintToArrayBuffer = (array) => {
 };
 
 export const convertWavToMp3 = async (wav) => {
+  if (!wav) {
+    winstonLogger.debug(`convertWavToMp3 failed; no wav provided. Received: ${wav}`);
+    return false;
+  }
+
+  // const arrayBuffer = this.result;
+  const arrayBuffer = uintToArrayBuffer(wav);
+
+  // Create a WAV decoder
+  const wavDecoder = lamejs.WavHeader.readHeader(new DataView(arrayBuffer));
+
+  // Get the WAV audio data as an array of samples
+  const wavSamples = new Int16Array(arrayBuffer, wavDecoder.dataOffset, wavDecoder.dataLen / 2);
+
+  // Create an MP3 encoder
+  const mp3Encoder = new lamejs.Mp3Encoder(wavDecoder.channels, wavDecoder.sampleRate, 128);
+
+  // Encode the WAV samples to MP3
+  const mp3Buffer = mp3Encoder.encodeBuffer(wavSamples);
+
+  // Finalize the MP3 encoding
+  const mp3Data = mp3Encoder.flush();
+
+  // Combine the MP3 header and data into a new ArrayBuffer
+  const mp3BufferWithHeader = new Uint8Array(mp3Buffer.length + mp3Data.length);
+  mp3BufferWithHeader.set(mp3Buffer, 0);
+  mp3BufferWithHeader.set(mp3Data, mp3Buffer.length);
+
+  const verification = await verifyMp3Integrity(mp3BufferWithHeader);
+  console.log("potato verification", verification);
+
   return new Promise((resolve, reject) => {
-    // const arrayBuffer = this.result;
-    const arrayBuffer = uintToArrayBuffer(wav);
-
-    // Create a WAV decoder
-    const wavDecoder = lamejs.WavHeader.readHeader(new DataView(arrayBuffer));
-
-    // Get the WAV audio data as an array of samples
-    const wavSamples = new Int16Array(arrayBuffer, wavDecoder.dataOffset, wavDecoder.dataLen / 2);
-
-    // Create an MP3 encoder
-    const mp3Encoder = new lamejs.Mp3Encoder(wavDecoder.channels, wavDecoder.sampleRate, 128);
-
-    // Encode the WAV samples to MP3
-    const mp3Buffer = mp3Encoder.encodeBuffer(wavSamples);
-
-    // Finalize the MP3 encoding
-    const mp3Data = mp3Encoder.flush();
-
-    // Combine the MP3 header and data into a new ArrayBuffer
-    const mp3BufferWithHeader = new Uint8Array(mp3Buffer.length + mp3Data.length);
-    mp3BufferWithHeader.set(mp3Buffer, 0);
-    mp3BufferWithHeader.set(mp3Data, mp3Buffer.length);
+    if (!verification) {
+      reject(false);
+    } else {
+      resolve(mp3BufferWithHeader);
+    }
 
     //return ArrayBuffer
-    resolve(mp3BufferWithHeader);
+    // resolve(mp3BufferWithHeader);
     // };
 
     // reader.onerror = function (error) {
@@ -309,4 +325,44 @@ export const getSpacedAnswer = (answer) => {
   }
   console.log("result: ", result);
   return result.toString();
+};
+
+/**
+ * @param {mp3} src
+ * @return {boolean}
+ */
+export const verifyMp3Integrity = async (src) => {
+  if (!src) {
+    return false;
+  }
+
+  //This script is going to try to verify the mp3 by processing it through ffmpeg
+  //The goal is for there to be no errors
+  //but if there are, the purpose of this script is to handle that situation gracefully
+
+  return new Promise((resolve, reject) => {
+    try {
+      //as a default, we assume there are errors until proven otherwise
+      let checkFfmpegErrors = { status: true };
+
+      //-xerror means the script will stop when it encounters the first error, which we want
+      //-i pipe:0 means the input gets piped in rather than passed as an argument, which prevents errors
+      checkFfmpegErrors = spawnSync(pathToFfmpeg, ["-xerror", "-i", "pipe:0", "-f", "null", "-"], {
+        encoding: "utf-8",
+        input: src,
+      });
+
+      //if no errors are present, resolve the verification check as true
+      //in other words, verification worked, input is an mp3
+      if (!checkFfmpegErrors.status) {
+        resolve(true);
+      } else {
+        //otherwise resolve false-- the script successfully verified that the input is not an mp3
+        resolve(false);
+      }
+    } catch (error) {
+      //The script failed to verify the input for some reason
+      reject(`Mp3 verification error: ${error}`);
+    }
+  });
 };

@@ -73,12 +73,12 @@ app.post("/captcha/audio", async function (req, res) {
     winstonLogger.debug(
       `Can't decrypt incoming JWE. Received error: "${error}", input ${JSON.stringify(req.body.validation)}`
     );
-    return res.status(500).send("Failed to decrypt captcha");
+    return res.status(500).send("Failed to decrypt captcha request");
   }
 
   if (!decryptedRequest) {
     winstonLogger.error(`Failed to decrypt captcha. `);
-    return res.status(500).send("Failed to decrypt captcha");
+    return res.status(500).send("Failed to decrypt captcha request");
   }
 
   winstonLogger.debug(`verifyCaptcha decrypted ${JSON.stringify(decryptedRequest)}`);
@@ -92,9 +92,25 @@ app.post("/captcha/audio", async function (req, res) {
   //I chose the m8 voice because I thought it was the clearest/easiest to understand
   //but if you want to change it later, there are more here: https://github.com/abbr/text2wav.node.js/tree/master/espeak-ng-data/voices/!v
   let wav = await text2wav(captchaAudioText, { voice: "en+m8" });
+  if (!wav) {
+    winstonLogger.error(`Failed to generate wav file. `);
+    return res.status(500).send("Failed to generate audio");
+  }
 
   //convert wav to mp3
-  const mp3 = await convertWavToMp3(wav);
+  let mp3;
+  try {
+    mp3 = await convertWavToMp3(wav);
+  } catch (error) {
+    winstonLogger.error(`Failed to convert wav to mp3. Error: ${error}`);
+    return res.status(500).send("Failed to generate audio");
+  }
+
+  if (!mp3) {
+    winstonLogger.error(`Failed to convert wav to mp3. `);
+    return res.status(500).send("Failed to generate audio");
+  }
+
   const buffer = Buffer.from(mp3);
 
   //write locally for testing

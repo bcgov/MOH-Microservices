@@ -21,6 +21,7 @@
   "dependencies": {
     "@breezystack/lamejs": "^1.2.7",
     "express": "^5.1.0",
+    "ffmpeg-static": "^5.2.0",
     "jsonwebtoken": "^9.0.2",
     "node-jose": "^2.2.0",
     "svg-captcha": "^1.4.0",
