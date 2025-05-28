@@ -316,12 +316,16 @@ export const convertWavToMp3 = async (wav) => {
  * @return {string}
  */
 export const getSpacedAnswer = (answer) => {
-  let result = [];
+  if (typeof answer !== "string") {
+    return answer;
+  }
+
+  let result = "";
   for (let i = 0; i < answer.length; i++) {
-    result.push(answer[i]);
+    result += answer[i];
     //changing the punctuation changes how the captcha sounds
     //alternatives include : and ,
-    result.push("; ");
+    result += "; ";
   }
   console.log("result: ", result);
   return result.toString();

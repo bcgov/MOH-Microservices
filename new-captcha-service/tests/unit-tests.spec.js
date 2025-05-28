@@ -509,3 +509,42 @@ describe("convertWavToMp3()", async () => {
     expect(mp3Check).toBe(true);
   });
 });
+
+describe("getSpacedAnswer()", async () => {
+  it("Should return undefined when not passed arguments", async () => {
+    const result = getSpacedAnswer();
+    expect(result).toBeUndefined();
+  });
+
+  it("Should return body when passed a non-string (array)", async () => {
+    const body = [];
+    const result = getSpacedAnswer(body);
+    expect(result).toEqual(body);
+  });
+
+  it("Should return body when passed a non-string (object)", async () => {
+    const body = {};
+    const result = getSpacedAnswer(body);
+    expect(result).toEqual(body);
+  });
+
+  it("Should return body when passed a non-string (null)", async () => {
+    const body = null;
+    const result = getSpacedAnswer(body);
+    expect(result).toEqual(body);
+  });
+
+  it("Should return body when passed a non-string (boolean)", async () => {
+    const body = false;
+    const result = getSpacedAnswer(body);
+    expect(result).toEqual(body);
+  });
+
+  it("Should return a spaced out string when passed a string", async () => {
+    const body = "aaaaaa";
+    const result = getSpacedAnswer(body);
+    expect(result).not.toEqual(body);
+    //the next line can be changed or commented out if needed
+    expect(result).toEqual("a; a; a; a; a; a; ");
+  });
+});
