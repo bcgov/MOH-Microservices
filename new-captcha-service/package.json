@@ -8,7 +8,7 @@
     "start": "node src/index server",
     "dev": "nodemon --watch src --inspect=0.0.0.0:9229 --exec node ./src/index.js server",
     "test": "vitest",
-    "test:coverage": "echo \"WARNING: No test specified\" && exit 0",
+    "test:coverage": "vitest run --coverage",
     "test:lint": "echo \"WARNING: No LINTer specified\" && exit 0",
     "test:schema": "echo \"WARNING: No schema specified\" && exit 0",
     "lint": "eslint .",
@@ -29,6 +29,7 @@
     "winston": "^3.17.0"
   },
   "devDependencies": {
+    "@vitest/coverage-v8": "^3.1.4",
     "@vitest/eslint-plugin": "^1.1.43",
     "eslint": "^9.25.1",
     "eslint-config-prettier": "^10.1.2",
