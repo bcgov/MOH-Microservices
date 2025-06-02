@@ -9,7 +9,7 @@ export const tryServer = async (website, HTTPMethod) => {
         method: HTTPMethod,
       });
       // console.log(`successfully reached ${website}!`);
-      return new Promise((resolve, reject) => {
+      return new Promise((resolve) => {
         resolve();
       });
     } catch (error) {
@@ -69,7 +69,7 @@ export const generateServiceCommand = (override) => {
 };
 
 export const startLocalServiceWith = async (command) => {
-  await exec(command, (err, stdout, stderr) => {
+  await exec(command, (err) => {
     console.log("service failed to start: ", err);
   });
 };
