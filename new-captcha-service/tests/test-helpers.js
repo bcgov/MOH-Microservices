@@ -17,6 +17,8 @@ export const tryServer = async (website, HTTPMethod) => {
       await new Promise((resolve) => setTimeout(resolve, 1000));
     }
   }
+
+  //if the for loop runs out, the site must be offline
   return new Promise((resolve, reject) => {
     reject(`Couldn't reach ${website} (tried ${retryAttempts} times and gave up)`);
   });
@@ -36,7 +38,7 @@ export const generatePortNumber = () => {
     const provisionalPort = Math.floor(Math.random() * (max - min + 1)) + min;
 
     if (usedPorts.includes(provisionalPort)) {
-      console.log(`port number ${provisionalPort} already in use, regenerating...`);
+      // console.log(`port number ${provisionalPort} already in use, regenerating...`);
     } else {
       usedPorts.push(provisionalPort);
       return provisionalPort;
@@ -47,10 +49,13 @@ export const generatePortNumber = () => {
 };
 
 export const generateServiceCommand = (override) => {
+  //generates a command to run the server for unit/integration tests
+
   if ((override && typeof override !== "object") || Array.isArray(override)) {
     throw new Error("The generateServiceCommand() function needs to be passed an object!");
   }
 
+  //default options
   const options = {
     SERVICE_PORT: 3000,
     CAPTCHA_SIGN_EXPIRY: 180,
@@ -63,8 +68,10 @@ export const generateServiceCommand = (override) => {
     timeout: "5s",
   };
 
+  //overrides the default options with whatever's passed down as an argument
   Object.assign(options, override);
 
+  //returns a command that's ready to be run with `exec`
   return `SERVICE_PORT=${options.SERVICE_PORT} CAPTCHA_SIGN_EXPIRY=${options.CAPTCHA_SIGN_EXPIRY} PRIVATE_KEY='${options.PRIVATE_KEY}' SECRET=${options.SECRET} BYPASS_ANSWER=${options.BYPASS_ANSWER} JWT_SIGN_EXPIRY=${options.JWT_SIGN_EXPIRY} LOG_LEVEL=${options.LOG_LEVEL}  timeout ${options.timeout} node src/index.js server`;
 };
 

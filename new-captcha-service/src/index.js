@@ -51,6 +51,7 @@ app.get("/status", function (req, res) {
 app.post("/captcha/audio", async function (req, res) {
   winstonLogger.debug(`Received request to /captcha/audio`);
 
+  //Check that incoming request body is valid
   if (!req || !req.body || !req.body.validation) {
     winstonLogger.debug(
       `Failed to verify request; missing validation property. Provided: ${JSON.stringify(req.body)}`
@@ -65,7 +66,7 @@ app.post("/captcha/audio", async function (req, res) {
     return res.status(400).send({ reason: "Incorrect validation format" });
   }
 
-  // Attempt decrypt
+  // Attempt to decrypt request body
   let decryptedRequest;
   try {
     decryptedRequest = await decryptJWE(req.body.validation, env.PRIVATE_KEY);
@@ -76,11 +77,13 @@ app.post("/captcha/audio", async function (req, res) {
     return res.status(500).send("Failed to decrypt captcha request");
   }
 
-  if (!decryptedRequest) {
+  // If the decrypted request doesn't look the way we expect it to, return an error
+  if (!decryptedRequest || !decryptedRequest.answer) {
     winstonLogger.error(`Failed to decrypt captcha. `);
     return res.status(500).send("Failed to decrypt captcha request");
   }
 
+  //If it didn't return as an error, we can assume it successfully decrypted
   winstonLogger.debug(`verifyCaptcha decrypted ${JSON.stringify(decryptedRequest)}`);
 
   winstonLogger.debug("Generate speech as WAV in ArrayBuffer");
@@ -127,8 +130,8 @@ app.post("/captcha/audio", async function (req, res) {
 
 app.post("/captcha", async function (req, res) {
   winstonLogger.debug(`Received request to /captcha`);
-  //check nonce is formatted correctly, return error if it's not
 
+  //check nonce is present and formatted correctly, return error if it's not
   if (!req || !req.body || !Object.hasOwn(req.body, "nonce") || !req.body.nonce) {
     winstonLogger.debug(`Failed to generate captcha; no nonce.`);
     return res.status(400).send({ reason: "Missing nonce" });
@@ -186,6 +189,10 @@ app.post("/captcha", async function (req, res) {
 
 app.post("/verify/captcha", async function (req, res) {
   winstonLogger.debug(`Received request to /verify/captcha`);
+  //As a broad overview, the /captcha endpoint gives the user an encrypted JWE object containing the expected captcha answer
+  //This endpoint expects that JWE back and decrypts it to verify the user or not
+
+  //First we check that the nonce is present and formatted correctly
   if (!req || !req.body || !Object.hasOwn(req.body, "nonce") || !req.body.nonce) {
     winstonLogger.debug(`Failed to verify captcha; no nonce.`);
     return res.status(400).send({ valid: false, reason: "Missing nonce" });
@@ -198,7 +205,8 @@ app.post("/verify/captcha", async function (req, res) {
     return res.status(400).send({ valid: false, reason: "Incorrect nonce format" });
   }
 
-  //If Bypass_Answer is set and user input matches it, pass the captcha test
+  //If the nonce is good, then we move on to the bypass answer
+  //If the BYPASS_ANSWER is set in the environment variables and user input matches it, pass the captcha test without bothering with decryption
   if (env.BYPASS_ANSWER && env.BYPASS_ANSWER.length > 0 && env.BYPASS_ANSWER === req.body.answer) {
     winstonLogger.debug(`Captcha bypassed! Creating JWT.`);
 
@@ -213,7 +221,8 @@ app.post("/verify/captcha", async function (req, res) {
     return res.status(200).send(result);
   }
 
-  // Otherwise prepare to attempt decrypt
+  // If the user input is anything else, prepare to attempt decrypt
+  // First check if there's a validation object to decrypt in the first place
   if (!Object.hasOwn(req.body, "validation") || !req.body.validation) {
     winstonLogger.debug(
       `Failed to verify request; missing validation property. Provided: ${JSON.stringify(req.body)}`
@@ -221,6 +230,7 @@ app.post("/verify/captcha", async function (req, res) {
     return res.status(400).send({ valid: false, reason: "Incorrect validation format" });
   }
 
+  // Then check if the validation object is properly formatted
   if (!verifyIsJWE(req.body.validation)) {
     winstonLogger.debug(
       `Failed to decrypt captcha; not JWE format. Provided: ${JSON.stringify(req.body.validation)}`
@@ -228,7 +238,7 @@ app.post("/verify/captcha", async function (req, res) {
     return res.status(400).send({ valid: false, reason: "Incorrect validation format" });
   }
 
-  // Attempt decrypt
+  // Ok, validation object looks good, let's try to decrypt it
   let decryptedRequest;
   try {
     decryptedRequest = await decryptJWE(req.body.validation, env.PRIVATE_KEY);
@@ -239,12 +249,18 @@ app.post("/verify/captcha", async function (req, res) {
     return res.status(500).send("Failed to decrypt captcha");
   }
 
-  if (!decryptedRequest) {
+  // If the decrypted request doesn't look the way we expect it to, return an error
+  if (
+    !decryptedRequest ||
+    !decryptedRequest.expiry ||
+    !decryptedRequest.nonce ||
+    !decryptedRequest.answer
+  ) {
     winstonLogger.error(`Failed to decrypt captcha. `);
     return res.status(500).send("Failed to decrypt captcha");
   }
 
-  winstonLogger.debug(`verifyCaptcha decrypted ${JSON.stringify(decryptedRequest)}`);
+  winstonLogger.debug(`verify Captcha decrypted ${JSON.stringify(decryptedRequest)}`);
 
   //The following responses need to return a 200 so the common library captcha component will handle them correclty
 
@@ -281,10 +297,6 @@ app.post("/verify/captcha", async function (req, res) {
 
   winstonLogger.debug(`Created JWT: ${JSON.stringify(result)} `);
   return res.status(200).send(result);
-});
-
-app.get("/", (req, res) => {
-  return res.status(200).send("Hello world");
 });
 
 app.listen(env.SERVICE_PORT);

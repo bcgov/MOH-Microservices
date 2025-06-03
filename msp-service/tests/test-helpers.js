@@ -6,7 +6,6 @@ export const startMockLogger = async (dynamicPort) => {
   const childProcess = await exec(
     `${dynamicPortEnv} timeout 5s node bin/mock-logger.js`,
     (err, stdout, stderr) => {
-      // console.log("potato startup error", err, stderr);
     }
   );
 };

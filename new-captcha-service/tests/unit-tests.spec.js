@@ -175,8 +175,7 @@ describe("verifyJwtExpiry()", async () => {
     }).toThrowError();
   });
   it("Should return true when passed a parseable string", async () => {
-    const body = "10";
-    expect(verifyJwtExpiry(body)).toBe(true);
+    expect(verifyJwtExpiry("10")).toBe(true);
   });
 });
 
@@ -325,7 +324,7 @@ describe("encryptJWE()", async () => {
     const nonce = "defaultNonce";
     const captcha = { text: "fakeText" };
     const privateKey = `{"kty": "oct","kid": "gBdaS-G8RLax2qObTD94w","use": "enc","alg": "A256GCM","k": "FK3d8WvSRdxlUHs4Fs_xxYO3-6dCiUarBwiYNFw5hv8"}`;
-    const expiry = "potato";
+    const expiry = "foobar";
     const result = await encryptJWE(nonce, captcha, privateKey, expiry);
 
     expect(result).toBe(false);
@@ -455,7 +454,7 @@ describe("verifyIsJWE()", async () => {
   });
 });
 
-describe("(test helper function) verifyMp3Integrity()", async () => {
+describe("verifyMp3Integrity()", async () => {
   let testmp3;
   testmp3 = fs.readFileSync(path.resolve(__dirname, "./fixtures", "testmp3.mp3"));
 

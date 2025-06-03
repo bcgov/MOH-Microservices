@@ -160,6 +160,7 @@ export const encryptJWE = async (nonce, captcha, privateKey, expiry) => {
     return false;
   }
 
+  //try/catch block in case it throws an error
   try {
     if (!verifyJwtExpiry(expiry)) {
       winstonLogger.debug(`Invalid expiry format. Must be number. Received: ${expiry}`);
@@ -173,7 +174,7 @@ export const encryptJWE = async (nonce, captcha, privateKey, expiry) => {
   const body = {
     nonce,
     answer: captcha.text,
-    expiry: Date.now() + parseInt(expiry) * 60000,
+    expiry: Date.now() + parseInt(expiry) * 60000, //the current time plus a number of minutes equal to expiry
   };
 
   winstonLogger.debug(`to encrypt ${JSON.stringify(body)}`);
@@ -258,15 +259,15 @@ export const verifyIsJWE = (input) => {
   return true;
 };
 
-const uintToArrayBuffer = (array) => {
-  return array.buffer.slice(array.byteOffset, array.byteLength + array.byteOffset);
-};
-
 export const convertWavToMp3 = async (wav) => {
   if (!wav) {
     winstonLogger.debug(`convertWavToMp3 failed; no wav provided. Received: ${wav}`);
     return false;
   }
+
+  const uintToArrayBuffer = (array) => {
+    return array.buffer.slice(array.byteOffset, array.byteLength + array.byteOffset);
+  };
 
   // const arrayBuffer = this.result;
   const arrayBuffer = uintToArrayBuffer(wav);
@@ -292,7 +293,6 @@ export const convertWavToMp3 = async (wav) => {
   mp3BufferWithHeader.set(mp3Data, mp3Buffer.length);
 
   const verification = await verifyMp3Integrity(mp3BufferWithHeader);
-  console.log("potato verification", verification);
 
   return new Promise((resolve, reject) => {
     if (!verification) {
@@ -300,14 +300,6 @@ export const convertWavToMp3 = async (wav) => {
     } else {
       resolve(mp3BufferWithHeader);
     }
-
-    //return ArrayBuffer
-    // resolve(mp3BufferWithHeader);
-    // };
-
-    // reader.onerror = function (error) {
-    // reject(error);
-    // };
   });
 };
 
@@ -327,7 +319,6 @@ export const getSpacedAnswer = (answer) => {
     //alternatives include : and ,
     result += "; ";
   }
-  console.log("result: ", result);
   return result.toString();
 };
 

@@ -64,6 +64,8 @@ const defaultSecret = "defaultSecret";
 // await tryServer(ephemeralServerUrl, "HEAD");
 
 describe("Captcha server basics", async () => {
+  //the testing suite starts up a local version of the server with different environment variables to test different scenarios
+  //so before we do anything else, we need to make sure it's up and receiving traffic
   beforeAll(async () => {
     const standardPort = generatePortNumber();
     const defaultCommand = generateServiceCommand({
@@ -72,17 +74,10 @@ describe("Captcha server basics", async () => {
       SECRET: defaultSecret,
     });
     startLocalServiceWith(defaultCommand);
-    console.log("command started with: ", defaultCommand);
+    // console.log("command started with: ", defaultCommand);
     captchaServiceURL = `http://localhost:${standardPort}`;
     await tryServer(captchaServiceURL, "HEAD");
   }, 30000);
-
-  it("(Captcha service) Should respond with a 200 to the / endpoint", async () => {
-    const response = await fetch(`${captchaServiceURL}`, {
-      method: "HEAD",
-    });
-    expect(response.status).toBe(200);
-  });
 
   it("(Captcha service) Should respond with a 200 to the /hello endpoint", async () => {
     const response = await fetch(`${captchaServiceURL}/hello`, {
@@ -108,7 +103,7 @@ describe("/captcha endpoint", async () => {
       SECRET: defaultSecret,
     });
     startLocalServiceWith(defaultCommand);
-    console.log("command started with: ", defaultCommand);
+    // console.log("command started with: ", defaultCommand);
     captchaServiceURL = `http://localhost:${standardPort}`;
     await tryServer(captchaServiceURL, "HEAD");
   }, 30000);
@@ -123,7 +118,6 @@ describe("/captcha endpoint", async () => {
 
   it("(Captcha service) Should respond with a 400 to the /captcha endpoint with a null nonce", async () => {
     const nonce = null;
-
     const requestBody = { nonce: nonce };
 
     await fetch(`${captchaServiceURL}/captcha`, {
@@ -137,12 +131,11 @@ describe("/captcha endpoint", async () => {
 
   it("(Captcha service) Should respond with a 400 to the /captcha endpoint with incorrect nonce format", async () => {
     const nonce = invalidNonce;
-
     const requestBody = { nonce: nonce };
 
     await fetch(`${captchaServiceURL}/captcha`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" }, // this line is important, if this content-type is not set it wont work
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(requestBody),
     }).then(function (response) {
       expect(response.status).toBe(400);
@@ -151,12 +144,11 @@ describe("/captcha endpoint", async () => {
 
   it("(Captcha service) Should respond with a 200 and properly formatted object to the /captcha endpoint", async () => {
     const nonce = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee";
-
     const requestBody = { nonce: nonce };
 
     await fetch(`${captchaServiceURL}/captcha`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" }, // this line is important, if this content-type is not set it wont work
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(requestBody),
     })
       .then(function (response) {
@@ -205,7 +197,7 @@ describe("/verify/captcha endpoint", async () => {
       SECRET: defaultSecret,
     });
     startLocalServiceWith(defaultCommand);
-    console.log("command started with: ", defaultCommand);
+    // console.log("command started with: ", defaultCommand);
     captchaServiceURL = `http://localhost:${standardPort}`;
     await tryServer(captchaServiceURL, "HEAD");
   }, 30000);
@@ -219,12 +211,11 @@ describe("/verify/captcha endpoint", async () => {
 
   it("(Captcha service) Should respond with a 400 to the /verify/captcha endpoint with a null nonce", async () => {
     const nonce = null;
-
     const requestBody = { nonce: nonce };
 
     await fetch(`${captchaServiceURL}/verify/captcha`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" }, // this line is important, if this content-type is not set it wont work
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(requestBody),
     }).then(function (response) {
       expect(response.status).toBe(400);
@@ -233,12 +224,11 @@ describe("/verify/captcha endpoint", async () => {
 
   it("(Captcha service) Should respond with a 400 to the /verify/captcha endpoint with incorrect nonce format", async () => {
     const nonce = invalidNonce;
-
     const requestBody = { nonce: nonce };
 
     await fetch(`${captchaServiceURL}/verify/captcha`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" }, // this line is important, if this content-type is not set it wont work
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(requestBody),
     }).then(function (response) {
       expect(response.status).toBe(400);
@@ -247,12 +237,11 @@ describe("/verify/captcha endpoint", async () => {
 
   it("(Captcha service) Should respond with a 200 to the /verify/captcha endpoint when nonce is correctly formatted and captcha is bypassed", async () => {
     const nonce = wrongNonce;
-
     const requestBody = { nonce: nonce, answer: bypassAnswer, validation: fakeJWE };
 
     await fetch(`${captchaServiceURL}/verify/captcha`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" }, // this line is important, if this content-type is not set it wont work
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(requestBody),
     }).then(function (response) {
       expect(response.status).toBe(200);
@@ -261,12 +250,11 @@ describe("/verify/captcha endpoint", async () => {
 
   it("(Captcha service) Should respond with a 400 to the /verify/captcha endpoint when nonce is fine, captcha answer is wrong and isn't bypassed, and validation is missing", async () => {
     const nonce = wrongNonce;
-
     const requestBody = { nonce: nonce, answer: wrongAnswer };
 
     await fetch(`${captchaServiceURL}/verify/captcha`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" }, // this line is important, if this content-type is not set it wont work
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(requestBody),
     }).then(function (response) {
       expect(response.status).toBe(400);
@@ -275,12 +263,11 @@ describe("/verify/captcha endpoint", async () => {
 
   it("(Captcha service) Should respond with a 400 to the /verify/captcha endpoint when nonce is fine, captcha answer is wrong and isn't bypassed, and validation isn't an object", async () => {
     const nonce = wrongNonce;
-
     const requestBody = { nonce: nonce, answer: wrongAnswer, validation: "foobar" };
 
     await fetch(`${captchaServiceURL}/verify/captcha`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" }, // this line is important, if this content-type is not set it wont work
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(requestBody),
     }).then(function (response) {
       expect(response.status).toBe(400);
@@ -298,7 +285,7 @@ describe("/verify/captcha endpoint", async () => {
 
     await fetch(`${captchaServiceURL}/verify/captcha`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" }, // this line is important, if this content-type is not set it wont work
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(requestBody),
     }).then(function (response) {
       expect(response.status).toBe(400);
@@ -316,7 +303,7 @@ describe("/verify/captcha endpoint", async () => {
 
     await fetch(`${captchaServiceURL}/verify/captcha`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" }, // this line is important, if this content-type is not set it wont work
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(requestBody),
     }).then(function (response) {
       expect(response.status).toBe(400);
@@ -334,7 +321,7 @@ describe("/verify/captcha endpoint", async () => {
 
     await fetch(`${captchaServiceURL}/verify/captcha`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" }, // this line is important, if this content-type is not set it wont work
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(requestBody),
     }).then(function (response) {
       expect(response.status).toBe(400);
@@ -352,7 +339,7 @@ describe("/verify/captcha endpoint", async () => {
 
     await fetch(`${captchaServiceURL}/verify/captcha`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" }, // this line is important, if this content-type is not set it wont work
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(requestBody),
     }).then(function (response) {
       expect(response.status).toBe(400);
@@ -375,7 +362,7 @@ describe("/verify/captcha endpoint", async () => {
 
     await fetch(`${captchaServiceURL}/verify/captcha`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" }, // this line is important, if this content-type is not set it wont work
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(requestBody),
     }).then(function (response) {
       expect(response.status).toBe(500);
@@ -393,7 +380,7 @@ describe("/verify/captcha endpoint", async () => {
 
     await fetch(`${captchaServiceURL}/verify/captcha`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" }, // this line is important, if this content-type is not set it wont work
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(requestBody),
     }).then(function (response) {
       expect(response.status).toBe(200);
@@ -411,7 +398,7 @@ describe("/verify/captcha endpoint", async () => {
 
     await fetch(`${captchaServiceURL}/verify/captcha`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" }, // this line is important, if this content-type is not set it wont work
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(requestBody),
     }).then(function (response) {
       expect(response.status).toBe(200);
@@ -429,7 +416,7 @@ describe("/verify/captcha endpoint", async () => {
 
     await fetch(`${captchaServiceURL}/verify/captcha`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" }, // this line is important, if this content-type is not set it wont work
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(requestBody),
     }).then(function (response) {
       expect(response.status).toBe(200);
@@ -447,7 +434,7 @@ describe("/verify/captcha endpoint", async () => {
 
     await fetch(`${captchaServiceURL}/verify/captcha`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" }, // this line is important, if this content-type is not set it wont work
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(requestBody),
     })
       .then(function (response) {
@@ -479,7 +466,7 @@ describe("/captcha/audio endpoint", async () => {
       SECRET: defaultSecret,
     });
     startLocalServiceWith(defaultCommand);
-    console.log("command started with: ", defaultCommand);
+    // console.log("command started with: ", defaultCommand);
     captchaServiceURL = `http://localhost:${standardPort}`;
     await tryServer(captchaServiceURL, "HEAD");
   }, 30000);
@@ -506,7 +493,7 @@ describe("/captcha/audio endpoint", async () => {
 
     await fetch(`${captchaServiceURL}/captcha/audio`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" }, // this line is important, if this content-type is not set it wont work
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(requestBody),
     }).then(function (response) {
       expect(response.status).toBe(400);
@@ -520,7 +507,7 @@ describe("/captcha/audio endpoint", async () => {
 
     await fetch(`${captchaServiceURL}/captcha/audio`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" }, // this line is important, if this content-type is not set it wont work
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(requestBody),
     }).then(function (response) {
       expect(response.status).toBe(500);
@@ -532,7 +519,7 @@ describe("/captcha/audio endpoint", async () => {
 
     await fetch(`${captchaServiceURL}/captcha/audio`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" }, // this line is important, if this content-type is not set it wont work
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(requestBody),
     })
       .then(function (response) {
@@ -542,11 +529,8 @@ describe("/captcha/audio endpoint", async () => {
         return response.json();
       })
       .then(function (data) {
-        // console.log("potato data", data.audio)
-
         const audio = data.audio;
         const split = audio.split(",");
-        // console.log("potato split", split[1])
         //mime type should be correct
         expect(split[0]).toEqual("data:audio/mp3;base64");
         //audio should be base64
