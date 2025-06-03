@@ -21,42 +21,42 @@ describe("verifyPrivateKey()", async () => {
     //kty needs to be oct
     //use needs to be enc
     const body = { kty: "oct", use: "enc", alg: "foobar", k: "foobar" };
-    expect(() => verifyPrivateKey(JSON.stringify(body))).not.toThrowError();
+    await expect(verifyPrivateKey(JSON.stringify(body))).resolves.toBe(true);
   });
 
   it("Should throw error when not passed JSON", async () => {
     const body = "";
-    expect(() => verifyPrivateKey(JSON.stringify(body))).toThrowError();
+    await expect(verifyPrivateKey(JSON.stringify(body))).rejects.toThrowError();
   });
 
   it("Should throw error when passed empty object", async () => {
     const body = {};
-    expect(() => verifyPrivateKey(JSON.stringify(body))).toThrowError();
+    await expect(verifyPrivateKey(JSON.stringify(body))).rejects.toThrowError();
   });
 
   it("Should throw error when kty is missing", async () => {
     const body = { use: "enc", alg: "foobar", k: "foobar" };
-    expect(() => verifyPrivateKey(JSON.stringify(body))).toThrowError();
+    await expect(verifyPrivateKey(JSON.stringify(body))).rejects.toThrowError();
   });
   it("Should throw error when use is missing", async () => {
     const body = { kty: "oct", alg: "foobar", k: "foobar" };
-    expect(() => verifyPrivateKey(JSON.stringify(body))).toThrowError();
+    await expect(verifyPrivateKey(JSON.stringify(body))).rejects.toThrowError();
   });
   it("Should throw error when alg is missing", async () => {
     const body = { kty: "oct", use: "enc", k: "foobar" };
-    expect(() => verifyPrivateKey(JSON.stringify(body))).toThrowError();
+    await expect(verifyPrivateKey(JSON.stringify(body))).rejects.toThrowError();
   });
   it("Should throw error when k is missing", async () => {
     const body = { kty: "oct", use: "enc", alg: "foobar" };
-    expect(() => verifyPrivateKey(JSON.stringify(body))).toThrowError();
+    await expect(verifyPrivateKey(JSON.stringify(body))).rejects.toThrowError();
   });
   it("Should throw error when kty isn't 'oct'", async () => {
     const body = { kty: "foobar", use: "enc", alg: "foobar", k: "foobar" };
-    expect(() => verifyPrivateKey(JSON.stringify(body))).toThrowError();
+    await expect(verifyPrivateKey(JSON.stringify(body))).rejects.toThrowError();
   });
   it("Should throw error when use isn't 'enc'", async () => {
     const body = { kty: "oct", use: "foobar", alg: "foobar", k: "foobar" };
-    expect(() => verifyPrivateKey(JSON.stringify(body))).toThrowError();
+    await expect(verifyPrivateKey(JSON.stringify(body))).rejects.toThrowError();
   });
 });
 

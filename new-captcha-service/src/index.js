@@ -17,7 +17,7 @@ import * as text2wavModule from "text2wav";
 const text2wav = text2wavModule.default;
 
 //verify PRIVATE_KEY
-verifyPrivateKey(env.PRIVATE_KEY); //this function stops the service if the private key is malformed
+await verifyPrivateKey(env.PRIVATE_KEY); //this function stops the service if the private key is malformed
 verifyJwtExpiry(env.JWT_SIGN_EXPIRY);
 
 // try signing a JWT with env variables, throw an error if it fails
@@ -210,7 +210,12 @@ app.post("/verify/captcha", async function (req, res) {
   if (env.BYPASS_ANSWER && env.BYPASS_ANSWER.length > 0 && env.BYPASS_ANSWER === req.body.answer) {
     winstonLogger.debug(`Captcha bypassed! Creating JWT.`);
 
-    const result = await signObject(req.body.nonce, env.SECRET, env.JWT_SIGN_EXPIRY);
+    let result;
+    try {
+      result = await signObject(req.body.nonce, env.SECRET, env.JWT_SIGN_EXPIRY);
+    } catch (error) {
+      return res.status(500).send("Failed to verify captcha, please try again");
+    }
 
     if (!result) {
       winstonLogger.error(`Failed to sign JWT. `);
@@ -288,7 +293,12 @@ app.post("/verify/captcha", async function (req, res) {
 
   winstonLogger.debug(`Captcha verified! Creating JWT ${JSON.stringify(decryptedRequest)}`);
 
-  const result = await signObject(req.body.nonce, env.SECRET, env.JWT_SIGN_EXPIRY);
+  let result;
+  try {
+    result = await signObject(req.body.nonce, env.SECRET, env.JWT_SIGN_EXPIRY);
+  } catch (error) {
+    return res.status(500).send("Failed to verify captcha, please try again");
+  }
 
   if (!result) {
     winstonLogger.error(`Failed to sign JWT. `);

@@ -21,7 +21,7 @@ export const winstonLogger = winston.createLogger({
   transports: [new winston.transports.Console()],
 });
 
-export const verifyPrivateKey = (privateKey) => {
+export const verifyPrivateKey = async (privateKey) => {
   //this function throws an error if the private key is incorrectly formatted
   //this way if there's a problem, the service will crash in OpenShift right away
   //rather than cause weird bugs later
@@ -30,27 +30,28 @@ export const verifyPrivateKey = (privateKey) => {
   try {
     JSON.parse(privateKey);
   } catch (error) {
-    winstonLogger.error(`Failed to parse PRIVATE_KEY: ${JSON.stringify(error)}`);
+    winstonLogger.error(`Failed to parse PRIVATE_KEY as JSON: ${JSON.stringify(error)}`);
     throw Error(`PRIVATE_KEY invalid (must be valid JSON, received ${privateKey})`);
   }
 
   let parsedKey = JSON.parse(privateKey);
 
-  //Private Key must contain typical JSON Web Key (JWK) properties
-  if (!Object.prototype.hasOwnProperty.call(parsedKey, "kty")) {
-    throw Error(`PRIVATE_KEY isn't a valid JWK (missing "kty" property, received ${privateKey})`);
-  }
-
-  if (!Object.prototype.hasOwnProperty.call(parsedKey, "use")) {
-    throw Error(`PRIVATE_KEY isn't a valid JWK (missing "use" property, received ${privateKey})`);
+  try {
+    const result = await JWK.asKey(parsedKey);
+    console.log("result in try: ", result);
+  } catch (error) {
+    winstonLogger.error(`Failed to parse PRIVATE_KEY as JWK: ${JSON.stringify(error)}`);
+    throw Error(
+      `PRIVATE_KEY invalid (node-jose must be able to parse it as a JWK, received ${privateKey})`
+    );
   }
 
   if (!Object.prototype.hasOwnProperty.call(parsedKey, "alg")) {
-    throw Error(`PRIVATE_KEY isn't a valid JWK (missing "alg" property, received ${privateKey})`);
+    throw Error(`PRIVATE_KEY should have an alg property (received ${privateKey})`);
   }
 
   if (!Object.prototype.hasOwnProperty.call(parsedKey, "k")) {
-    throw Error(`PRIVATE_KEY isn't a valid JWK (missing "k" property, received ${privateKey})`);
+    throw Error(`PRIVATE_KEY should have a k property (received ${privateKey})`);
   }
 
   //This microservice uses symmetrical encryption.
