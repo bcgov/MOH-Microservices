@@ -51,7 +51,9 @@ export const verifyPrivateKey = async (privateKey) => {
   }
 
   if (!Object.prototype.hasOwnProperty.call(parsedKey, "k")) {
-    throw Error(`PRIVATE_KEY should have a k property (received ${privateKey})`);
+    throw Error(
+      `PRIVATE_KEY needs a k property in order to encrypt properly (received ${privateKey})`
+    );
   }
 
   //This microservice uses symmetrical encryption.
@@ -156,10 +158,11 @@ export const encryptJWE = async (nonce, captcha, privateKey, expiry) => {
     return false;
   }
 
-  if (!verifyPrivateKey(privateKey)) {
-    winstonLogger.debug(`Private key didn't pass verifyPrivateKey check. Received: ${privateKey}`);
-    return false;
-  }
+  // //if we see encryption errors, we can add this check to eliminate potential causes
+  // if (!verifyPrivateKey(privateKey)) {
+  //   winstonLogger.debug(`Private key didn't pass verifyPrivateKey check. Received: ${privateKey}`);
+  //   return false;
+  // }
 
   //try/catch block in case it throws an error
   try {

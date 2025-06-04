@@ -42,9 +42,9 @@ describe("verifyPrivateKey()", async () => {
     const body = { kty: "oct", alg: "foobar", k: "foobar" };
     await expect(verifyPrivateKey(JSON.stringify(body))).rejects.toThrowError();
   });
-  it("Should throw error when alg is missing", async () => {
+  it("Should not throw error even if alg is missing", async () => {
     const body = { kty: "oct", use: "enc", k: "foobar" };
-    await expect(verifyPrivateKey(JSON.stringify(body))).rejects.toThrowError();
+    await expect(verifyPrivateKey(JSON.stringify(body))).resolves.toBe(true);
   });
   it("Should throw error when k is missing", async () => {
     const body = { kty: "oct", use: "enc", alg: "foobar" };

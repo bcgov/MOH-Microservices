@@ -16,8 +16,12 @@ import {
 import * as text2wavModule from "text2wav";
 const text2wav = text2wavModule.default;
 
-//verify PRIVATE_KEY
+//Preliminary checks for malformed environment variables (to prevent bugs later)
+
+//verify PRIVATE_KEY (should be a JWK)
 await verifyPrivateKey(env.PRIVATE_KEY); //this function stops the service if the private key is malformed
+
+//verify JwtExpiry (should be a string parseable to a number)
 verifyJwtExpiry(env.JWT_SIGN_EXPIRY);
 
 // try signing a JWT with env variables, throw an error if it fails
@@ -30,6 +34,19 @@ try {
     \n Caught JWT error: '${error}'`);
 }
 
+// try encrypting a JWE with env variables, throw an error if it fails
+winstonLogger.debug(`Start test encryption: `);
+try {
+  await encryptJWE("aaaaa", { text: "bbbbb" }, env.PRIVATE_KEY, env.CAPTCHA_SIGN_EXPIRY);
+} catch (error) {
+  winstonLogger.error(`Failed to encrypt JWE. Error: ${JSON.stringify(error)}`);
+  throw Error(`Environment variables are invalid. 
+    \n Please check env.PRIVATE_KEY for issues. 
+    \n env.PRIVATE_KEY (should be a JWK): ${env.PRIVATE_KEY}. 
+    \n Caught encryption error: '${error}'`);
+}
+
+//Express server code
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
