@@ -51,18 +51,6 @@ const expiredJWE = await JWE.createEncrypt(JSON.parse(fakePrivateKey))
 
 const defaultSecret = "defaultSecret";
 
-//Code for adding custom servers later
-// const ephemeralPort = generatePortNumber();
-// const command = generateServiceCommand({
-//   BYPASS_ANSWER: bypassAnswer,
-//   SERVICE_PORT: ephemeralPort,
-//   SECRET: defaultSecret
-// });
-
-// await startLocalServiceWith(command);
-// const ephemeralServerUrl = `http://localhost:${ephemeralPort}`;
-// await tryServer(ephemeralServerUrl, "HEAD");
-
 describe("Captcha server basics", async () => {
   //the testing suite starts up a local version of the server with different environment variables to test different scenarios
   //so before we do anything else, we need to make sure it's up and receiving traffic
@@ -542,5 +530,96 @@ describe("/captcha/audio endpoint", async () => {
 
         expect(regexTest).toBe(true);
       });
+  });
+});
+
+describe("General rate limiting", async () => {
+  const RATE_LIMIT = 25;
+  const AUDIO_RATE_LIMIT = 5;
+
+  let ephemeralServerUrl;
+
+  beforeEach(async () => {
+    const ephemeralPort = generatePortNumber();
+    const defaultCommand = generateServiceCommand({
+      SERVICE_PORT: ephemeralPort,
+      BYPASS_ANSWER: bypassAnswer,
+      SECRET: defaultSecret,
+      RATE_LIMIT,
+      AUDIO_RATE_LIMIT,
+    });
+    startLocalServiceWith(defaultCommand);
+    // console.log("command started with: ", defaultCommand);
+    ephemeralServerUrl = `http://localhost:${ephemeralPort}`;
+    await tryServer(ephemeralServerUrl, "HEAD");
+  }, 30000);
+
+  it("/captcha should respond with a 429 after RATE_LIMIT is reached", async () => {
+    const nonce = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee";
+    const requestBody = { nonce: nonce };
+
+    //reach the API limit
+    for (let i = 0; i < RATE_LIMIT; i++) {
+      const response = await fetch(`${ephemeralServerUrl}/captcha`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(requestBody),
+      });
+
+      expect(response.status).toBe(200);
+    }
+
+    //now that the limit has been reached, any subsequent API calls should respond with a 429
+    const response = await fetch(`${ephemeralServerUrl}/captcha`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(requestBody),
+    });
+    expect(response.status).toBe(429);
+  });
+
+  it("/verify/captcha should respond with a 429 after RATE_LIMIT is reached", async () => {
+    const nonce = wrongNonce;
+    const requestBody = { nonce: nonce, answer: bypassAnswer, validation: fakeJWE };
+
+    //reach the API limit
+    for (let i = 0; i < RATE_LIMIT; i++) {
+      const response = await fetch(`${ephemeralServerUrl}/verify/captcha`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(requestBody),
+      });
+      expect(response.status).toBe(200);
+    }
+
+    //now that the limit has been reached, any subsequent API calls should respond with a 429
+    const response = await fetch(`${ephemeralServerUrl}/verify/captcha`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(requestBody),
+    });
+    expect(response.status).toBe(429);
+  });
+
+  it("/captcha/audio should respond with a 429 after AUDIO_RATE_LIMIT is reached", async () => {
+    const requestBody = { validation: fakeJWE };
+
+    //reach the API limit
+    for (let i = 0; i < AUDIO_RATE_LIMIT; i++) {
+      const response = await fetch(`${ephemeralServerUrl}/captcha/audio`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(requestBody),
+      });
+      expect(response.status).toBe(200);
+    }
+
+    //now that the limit has been reached, any subsequent API calls should respond with a 429
+    const response = await fetch(`${ephemeralServerUrl}/captcha/audio`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(requestBody),
+    });
+    expect(response.status).toBe(429);
   });
 });

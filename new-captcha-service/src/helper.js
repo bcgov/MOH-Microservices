@@ -38,7 +38,6 @@ export const verifyPrivateKey = async (privateKey) => {
 
   try {
     const result = await JWK.asKey(parsedKey);
-    console.log("result in try: ", result);
   } catch (error) {
     winstonLogger.error(`Failed to parse PRIVATE_KEY as JWK: ${JSON.stringify(error)}`);
     throw Error(

@@ -65,6 +65,8 @@ export const generateServiceCommand = (override) => {
     BYPASS_ANSWER: "a1a1a1",
     JWT_SIGN_EXPIRY: "10",
     LOG_LEVEL: "debug",
+    RATE_LIMIT: 25,
+    AUDIO_RATE_LIMIT: 5,
     timeout: "5s",
   };
 
@@ -72,7 +74,7 @@ export const generateServiceCommand = (override) => {
   Object.assign(options, override);
 
   //returns a command that's ready to be run with `exec`
-  return `SERVICE_PORT=${options.SERVICE_PORT} CAPTCHA_SIGN_EXPIRY=${options.CAPTCHA_SIGN_EXPIRY} PRIVATE_KEY='${options.PRIVATE_KEY}' SECRET=${options.SECRET} BYPASS_ANSWER=${options.BYPASS_ANSWER} JWT_SIGN_EXPIRY=${options.JWT_SIGN_EXPIRY} LOG_LEVEL=${options.LOG_LEVEL}  timeout ${options.timeout} node src/index.js server`;
+  return `SERVICE_PORT=${options.SERVICE_PORT} CAPTCHA_SIGN_EXPIRY=${options.CAPTCHA_SIGN_EXPIRY} PRIVATE_KEY='${options.PRIVATE_KEY}' SECRET=${options.SECRET} BYPASS_ANSWER=${options.BYPASS_ANSWER} JWT_SIGN_EXPIRY=${options.JWT_SIGN_EXPIRY} LOG_LEVEL=${options.LOG_LEVEL} RATE_LIMIT=${options.RATE_LIMIT} AUDIO_RATE_LIMIT=${options.AUDIO_RATE_LIMIT}  timeout ${options.timeout} node src/index.js server`;
 };
 
 export const startLocalServiceWith = async (command) => {

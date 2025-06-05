@@ -6,7 +6,7 @@
   "scripts": {
     "build": "echo \"WARNING: No build script specified\" && exit 0",
     "start": "node src/index server",
-    "dev": "nodemon --watch src --inspect=0.0.0.0:9229 --exec node ./src/index.js server",
+    "dev": "nodemon --watch src --exec node ./src/index.js server",
     "test": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:lint": "echo \"WARNING: No LINTer specified\" && exit 0",
@@ -21,6 +21,7 @@
   "dependencies": {
     "@breezystack/lamejs": "^1.2.7",
     "express": "^5.1.0",
+    "express-rate-limit": "^7.5.0",
     "ffmpeg-static": "^5.2.0",
     "jsonwebtoken": "^9.0.2",
     "node-jose": "^2.2.0",

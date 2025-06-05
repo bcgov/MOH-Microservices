@@ -13,6 +13,7 @@ import {
   convertWavToMp3,
   getSpacedAnswer,
 } from "./helper.js";
+import { rateLimit } from "express-rate-limit";
 import * as text2wavModule from "text2wav";
 const text2wav = text2wavModule.default;
 
@@ -46,6 +47,27 @@ try {
     \n Caught encryption error: '${error}'`);
 }
 
+//processing audio is a resource-intensive operation
+//so we want a goldilocks zone for the audio limit
+//not so low that it blocks the unit tests from passing
+//not so high that OpenShift's memory/CPU usage suffer
+const audioLimiter = rateLimit({
+  windowMs: 5 * 1000, // 5 seconds
+  limit: env.AUDIO_RATE_LIMIT, // Limit each IP to 100 requests per `window` (here, per 5 seconds).
+  standardHeaders: "draft-8", // draft-6: `RateLimit-*` headers; draft-7 & draft-8: combined `RateLimit` header
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers.
+  // store: ... , // Redis, Memcached, etc. See below.
+});
+
+//everything else can be a bit higher
+const limiter = rateLimit({
+  windowMs: 5 * 1000, // 5 seconds
+  limit: env.RATE_LIMIT, // Limit each IP to 100 requests per `window` (here, per 5 seconds).
+  standardHeaders: "draft-8", // draft-6: `RateLimit-*` headers; draft-7 & draft-8: combined `RateLimit` header
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers.
+  // store: ... , // Redis, Memcached, etc. See below.
+});
+
 //Express server code
 const app = express();
 app.use(express.json());
@@ -65,7 +87,7 @@ app.get("/status", function (req, res) {
   res.status(200).send("OK").end();
 });
 
-app.post("/captcha/audio", async function (req, res) {
+app.post("/captcha/audio", audioLimiter, async function (req, res) {
   winstonLogger.debug(`Received request to /captcha/audio`);
 
   //Check that incoming request body is valid
@@ -145,7 +167,7 @@ app.post("/captcha/audio", async function (req, res) {
   return res.status(200).send(JSON.stringify(payload));
 });
 
-app.post("/captcha", async function (req, res) {
+app.post("/captcha", limiter, async function (req, res) {
   winstonLogger.debug(`Received request to /captcha`);
 
   //check nonce is present and formatted correctly, return error if it's not
@@ -204,7 +226,7 @@ app.post("/captcha", async function (req, res) {
   return res.status(200).send(payload);
 });
 
-app.post("/verify/captcha", async function (req, res) {
+app.post("/verify/captcha", limiter, async function (req, res) {
   winstonLogger.debug(`Received request to /verify/captcha`);
   //As a broad overview, the /captcha endpoint gives the user an encrypted JWE object containing the expected captcha answer
   //This endpoint expects that JWE back and decrypts it to verify the user or not
