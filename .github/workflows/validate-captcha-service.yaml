@@ -17,12 +17,10 @@ jobs:
       - uses: actions/checkout@main
       - uses: actions/setup-node@main
         with:
-          node-version: "10"
+          node-version: "22"
       - name: Install dependencies
         run: npm i
       - name: Unit tests w/ coverage
         run: npm run test:coverage
-      # - name: OpenAPI Schema
-      # run: npm run test:schema
       - name: Build step
         run: npm run build
