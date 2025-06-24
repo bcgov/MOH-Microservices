@@ -1,6 +1,6 @@
 {
   "splunk-forwarder/**.{js,ts,jsx,tsx,vue,cjs}": ["sh -c 'cd splunk-forwarder && npm run pre-commit:lint'"],
   "splunk-forwarder/**": ["sh -c 'cd splunk-forwarder && npm run pre-commit:prettier'"],
-  "new-captcha-service/**.{js,ts,jsx,tsx,vue,cjs}": ["sh -c 'cd new-captcha-service && npm run pre-commit:lint'"],
-  "new-captcha-service/**": ["sh -c 'cd new-captcha-service && npm run pre-commit:prettier'"]
+  "captcha-service/**.{js,ts,jsx,tsx,vue,cjs}": ["sh -c 'cd captcha-service && npm run pre-commit:lint'"],
+  "captcha-service/**": ["sh -c 'cd captcha-service && npm run pre-commit:prettier'"]
 }
