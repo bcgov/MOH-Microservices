@@ -28,7 +28,6 @@
   },
   "homepage": "https://github.com/bcgov/MOH-MSP-Enrolment#msp-service/readme",
   "dependencies": {
-    "colors": "^1.1.2",
     "express": "^4.18.2",
     "http-proxy-middleware": "^1.0.6",
     "json-stringify-safe": "^5.0.1",
