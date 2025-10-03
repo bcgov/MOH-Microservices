@@ -17,8 +17,8 @@
 
 'use strict';
 
-const gulp = require('gulp');
-const clean = require('gulp-clean');
+import gulp from "gulp";
+import clean from "gulp-clean";
 
 gulp.task('clean', () =>
   gulp.src('build', { read: false, allowEmpty: true }).pipe(

@@ -1,7 +1,7 @@
 //This test server is used to return API responses in the dev environment
 //This simulates the real-life behavior of the API endpoint that the msp-service redirects to
 
-const express = require("express");
+import express from "express";
 const app = express();
 
 const MOCK_API_PORT = process.env.MOCK_API_PORT || 3001; //needs to match the TARGET_URL in start-local-service.sh

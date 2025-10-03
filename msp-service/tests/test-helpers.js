@@ -1,4 +1,4 @@
-const { exec } = require("node:child_process");
+import {exec} from "node:child_process"
 
 export const startMockLogger = async (dynamicPort) => {
   //if a dynamic port is used, add it to the bash script as an env variable

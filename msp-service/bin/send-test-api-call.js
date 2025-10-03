@@ -1,8 +1,8 @@
 //This script sends a test API call to the msp-service
 //If all three of the mock services are running, you'll see a successful log in the mock-api
 
-const { exec } = require("child_process");
-const jwt = require("jsonwebtoken");
+import jwt from "jsonwebtoken";
+import {exec } from "child_process";
 
 const SECRET = "defaultSecret";
 const SERVICE_PORT = 8080; //needs to be 8080 because that's what's in the index.js
