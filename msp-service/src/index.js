@@ -1,25 +1,12 @@
 import https from "https";
 import http from "http";
-// import util from "util";
-// import path from "path";
-// import fs from "fs";
-// import colors from "colors";
-import winston from "winston";
 import jwt from "jsonwebtoken";
-// import url from "url";
 import stringify from "json-stringify-safe";
 import express from "express";
-// import moment from "moment";
 import {createProxyMiddleware} from "http-proxy-middleware";
 
-import {logProvider, denyAccess, logSplunkError, logSplunkInfo} from "./helper.js"
+import {winstonLogger, denyAccess, logSplunkError, logSplunkInfo} from "./helper.js"
 
-// verbose replacement
-
-
-// winston.add(winston.transports.Console, {
-//    timestamp: true
-// });
 
 const SERVICE_PORT = process.env.PORT || 8080;
 
@@ -230,40 +217,37 @@ var proxy = createProxyMiddleware({
     keepAlive: true,
     changeOrigin: true,
     auth: process.env.TARGET_USERNAME_PASSWORD || "username:password",
-    logLevel: 'info',
-    logProvider: logProvider,
+    logger: winstonLogger,
 
     //
     // Listen for the `error` event on `proxy`.
     //
-    onError: function (err, req, res) {
-        logSplunkError("proxy error: " + err + "; req.url: " + req.url + "; status: " + res.statusCode);
+    on: {
+        error: (err, req, res) => {
+            logSplunkError("proxy error: " + err + "; req.url: " + req.url + "; status: " + res.statusCode);
         res.writeHead(500, {
             'Content-Type': 'text/plain'
         });
 
-        res.end('Error with proxy');
+        res.end('Error creating proxy middleware');
+        },
+        proxyReq: (proxyReq, req, res, options) => {
+            winstonLogger.info('RAW proxyReq: ', stringify(proxyReq.headers));
+            logSplunkInfo('RAW URL: ' + req.url + '; RAW headers: ', stringify(req.headers));
+            // winstonLogger.info('RAW options: ', stringify(options));
+        },
+        proxyRes: (proxyRes, req, res) => {
+            winstonLogger.info(
+                "RAW Response from the target: " + stringify(proxyRes.headers)
+            );
+
+            // Delete set-cookie
+            delete proxyRes.headers["set-cookie"];
+        },
+        proxyReqWs: () => {},
+        open: () => {},
+        close: () => {},
     },
-
-
-    //
-    // Listen for the `proxyRes` event on `proxy`.
-    //
-    onProxyRes: function (proxyRes, req, res) {
-        winston.info('RAW Response from the target: ' + stringify(proxyRes.headers));
-
-        // Delete set-cookie
-        delete proxyRes.headers["set-cookie"];
-    },
-
-    //
-    // Listen for the `proxyReq` event on `proxy`.
-    //
-    onProxyReq: function(proxyReq, req, res, options) {
-        //winston.info('RAW proxyReq: ', stringify(proxyReq.headers));
-    //    logSplunkInfo('RAW URL: ' + req.url + '; RAW headers: ', stringify(req.headers));
-        //winston.info('RAW options: ', stringify(options));
-    }
 });
 
 // Add in proxy AFTER authorization

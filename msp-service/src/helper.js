@@ -1,28 +1,13 @@
-// import https from "https";
 import http from "http";
-// import util from "util";
-// import path from "path";
-// import fs from "fs";
-// import colors from "colors";
 import winston from "winston";
-// import jwt from "jsonwebtoken";
-// import url from "url";
+const { createLogger, format, transports } = winston;
 import stringify from "json-stringify-safe";
-// import express from "express";
 import moment from "moment";
 
-export const logProvider = (provider) => {
-    var logger = winston;
-
-    var myCustomProvider = {
-        log: logger.log,
-        debug: logger.debug,
-        info: logSplunkInfo,
-        warn: logger.warn,
-        error: logSplunkError
-    }
-    return myCustomProvider;
-}
+export const winstonLogger = winston.createLogger({
+  format: format.combine(format.splat(), format.simple()),
+  transports: [new winston.transports.Console()],
+});
 
 /**
  * General deny access handler
@@ -41,12 +26,11 @@ export const denyAccess = (message, res, req) => {
 export const logSplunkError = (message) => {
 
     // log locally
-    winston.error(message);
+    winstonLogger.error(message);
 
     var body = JSON.stringify({
         message: message
     })
-
 
     var options = {
         hostname: process.env.LOGGER_HOST,
@@ -86,7 +70,7 @@ export const logSplunkError = (message) => {
 export const logSplunkInfo = (message) => {
 
     // log locally
-    winston.info(message);
+    winstonLogger.info(message);
 
     var body = JSON.stringify({
         message: message
