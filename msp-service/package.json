@@ -35,10 +35,6 @@
     "winston": "^3.18.3"
   },
   "devDependencies": {
-    "gulp": "^4.0.2",
-    "gulp-clean": "^0.4.0",
-    "gulp-sourcemaps": "^2.6.5",
-    "gulp-typescript": "^6.0.0-alpha.1",
     "nodemon": "^2.0.22",
     "vitest": "^2.1.8"
   },
