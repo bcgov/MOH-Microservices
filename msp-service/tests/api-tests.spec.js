@@ -29,6 +29,7 @@ const validToken = jwt.sign(
 const testBody = { body: "xyz", logsource: "integration test request" };
 
 const startLocalServiceWith = async (command) => {
+  // eslint-disable-next-line no-unused-vars
   await exec(command, (err, stdout, stderr) => {
     // console.log("service failed to start: ", err);
   });

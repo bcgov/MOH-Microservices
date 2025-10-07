@@ -1,6 +1,6 @@
 import http from "http";
 import winston from "winston";
-const { createLogger, format, transports } = winston;
+const { format } = winston;
 import stringify from "json-stringify-safe";
 import moment from "moment";
 

@@ -21,8 +21,6 @@ const token = jwt.sign(
   }
 );
 
-const testBody = { body: "xyz", logsource: "test curl request" };
-
 // const decoded = jwt.verify(token, SECRET);
 
 const url = `localhost:${SERVICE_PORT}/MSPDESubmitAttachment/${validNonce}`;

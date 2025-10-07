@@ -47,5 +47,11 @@
   },
   "engines": {
     "node": ">=18.0.0"
-  }
+  },
+  "browserslist": [
+    "node 18",
+    "node 20",
+    "node 22",
+    "not op_mini all"
+  ]
 }

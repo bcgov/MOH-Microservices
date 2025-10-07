@@ -2,17 +2,19 @@ import { exec } from "node:child_process";
 
 export const startMockLogger = async (dynamicPort) => {
   //if a dynamic port is used, add it to the bash script as an env variable
-  const dynamicPortEnv = !!dynamicPort ? `MOCK_LOGGER_PORT=${dynamicPort}` : "";
-  const childProcess = await exec(
+  const dynamicPortEnv = dynamicPort ? `MOCK_LOGGER_PORT=${dynamicPort}` : "";
+  exec(
     `${dynamicPortEnv} timeout 5s node bin/mock-logger.js`,
+    // eslint-disable-next-line no-unused-vars
     (err, stdout, stderr) => {}
   );
 };
 
 export const startMockApi = async (dynamicPort) => {
-  const dynamicPortEnv = !!dynamicPort ? `MOCK_API_PORT=${dynamicPort}` : "";
-  const childProcess = await exec(
+  const dynamicPortEnv = dynamicPort ? `MOCK_API_PORT=${dynamicPort}` : "";
+  exec(
     `${dynamicPortEnv} timeout 5s node bin/mock-api.js`,
+    // eslint-disable-next-line no-unused-vars
     (err, stdout, stderr) => {}
   );
 };
@@ -27,7 +29,7 @@ export const tryServer = async (website, HTTPMethod) => {
         method: HTTPMethod,
       });
       // console.log(`successfully reached ${website}!`);
-      return new Promise((resolve, reject) => {
+      return new Promise((resolve) => {
         resolve();
       });
     } catch (error) {

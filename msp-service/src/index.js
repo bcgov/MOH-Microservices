@@ -177,7 +177,7 @@ app.use("/", function (req, res, next) {
     //if that property exists and is true, then the skip check is true
     //if that property doesn't exist, or if it does exist and is set to false, then set to false
     const skipUuid =
-      selectedOptions.hasOwnProperty("skipUuidCheck") && selectedOptions["skipUuidCheck"] === true
+      Object.prototype.hasOwnProperty.call(selectedOptions, "skipUuidCheck") && selectedOptions["skipUuidCheck"] === true
         ? true
         : false;
 
@@ -189,7 +189,7 @@ app.use("/", function (req, res, next) {
 
     const jwtNonce = decoded.data.nonce;
     const skipMatch =
-      selectedOptions.hasOwnProperty("skipUuidNonceMatchCheck") &&
+      Object.prototype.hasOwnProperty.call(selectedOptions, "skipUuidNonceMatchCheck") &&
       selectedOptions["skipUuidNonceMatchCheck"] === true
         ? true
         : false;
@@ -240,11 +240,13 @@ var proxy = createProxyMiddleware({
 
       res.end("Error creating proxy middleware");
     },
-    proxyReq: (proxyReq, req, res, options) => {
+    // eslint-disable-next-line no-unused-vars
+    proxyReq: (proxyReq, req, res) => {
       winstonLogger.info("RAW proxyReq: ", stringify(proxyReq.headers));
       logSplunkInfo("RAW URL: " + req.url + "; RAW headers: ", stringify(req.headers));
       // winstonLogger.info('RAW options: ', stringify(options));
     },
+    // eslint-disable-next-line no-unused-vars
     proxyRes: (proxyRes, req, res) => {
       winstonLogger.info("RAW Response from the target: " + stringify(proxyRes.headers));
 

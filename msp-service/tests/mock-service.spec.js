@@ -11,8 +11,9 @@ const localServiceUrl = "http://localhost:8080";
 //vitest doesn't always close child processes out when it finishes, so there's a timeout here to make extra sure they close
 
 const startLocalService = async () => {
-  const childProcess = await exec(
+  await exec(
     "timeout 5s bin/start-local-msp-service.sh --test",
+    // eslint-disable-next-line no-unused-vars
     (err, stdout, stderr) => {}
   );
 };
