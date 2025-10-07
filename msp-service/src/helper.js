@@ -16,98 +16,101 @@ export const winstonLogger = winston.createLogger({
  * @param req
  */
 export const denyAccess = (message, res, req) => {
+  logSplunkError(
+    message +
+      " - access denied: url: " +
+      stringify(req.originalUrl) +
+      "  request: " +
+      stringify(req.headers)
+  );
 
-    logSplunkError(message + " - access denied: url: " + stringify(req.originalUrl) + "  request: " + stringify(req.headers));
-
-    res.writeHead(401);
-    res.end();
-}
+  res.writeHead(401);
+  res.end();
+};
 
 export const logSplunkError = (message) => {
+  // log locally
+  winstonLogger.error(message);
 
-    // log locally
-    winstonLogger.error(message);
+  var body = JSON.stringify({
+    message: message,
+  });
 
-    var body = JSON.stringify({
-        message: message
-    })
+  var options = {
+    hostname: process.env.LOGGER_HOST,
+    port: process.env.LOGGER_PORT,
+    path: "/log",
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: "Api-Token " + process.env.SPLUNK_AUTH_TOKEN,
+      "Content-Length": Buffer.byteLength(body),
+      logsource: process.env.HOSTNAME,
+      timestamp: moment().format("DD-MMM-YYYY"),
+      program: "msp-service",
+      severity: "error",
+    },
+  };
 
-    var options = {
-        hostname: process.env.LOGGER_HOST,
-        port: process.env.LOGGER_PORT,
-        path: '/log',
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Api-Token ' + process.env.SPLUNK_AUTH_TOKEN,
-            'Content-Length': Buffer.byteLength(body),
-            'logsource': process.env.HOSTNAME,
-            'timestamp': moment().format('DD-MMM-YYYY'),
-            'program': 'msp-service',
-            'severity': 'error'
-        }
-    };
-
-    var req = http.request(options, function (res) {
-        res.setEncoding('utf8');
-        res.on('data', function (chunk) {
-            console.log("Body chunk: " + JSON.stringify(chunk));
-        });
-        res.on('end', function () {
-            console.log('End of chunks');
-        });
+  var req = http.request(options, function (res) {
+    res.setEncoding("utf8");
+    res.on("data", function (chunk) {
+      console.log("Body chunk: " + JSON.stringify(chunk));
     });
-
-    req.on('error', function (e) {
-        console.error("error sending to splunk-forwarder: " + e.message);
+    res.on("end", function () {
+      console.log("End of chunks");
     });
+  });
 
-    // write data to request body
-    req.write(body);
-    req.end();
-}
+  req.on("error", function (e) {
+    console.error("error sending to splunk-forwarder: " + e.message);
+  });
+
+  // write data to request body
+  req.write(body);
+  req.end();
+};
 
 export const logSplunkInfo = (message) => {
+  // log locally
+  winstonLogger.info(message);
 
-    // log locally
-    winstonLogger.info(message);
+  var body = JSON.stringify({
+    message: message,
+  });
 
-    var body = JSON.stringify({
-        message: message
-    })
+  var options = {
+    hostname: process.env.LOGGER_HOST,
+    port: process.env.LOGGER_PORT,
+    path: "/log",
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: "Splunk " + process.env.SPLUNK_AUTH_TOKEN,
+      "Content-Length": Buffer.byteLength(body),
+      logsource: process.env.HOSTNAME,
+      timestamp: moment().format("DD-MMM-YYYY"),
+      method: "MSP-Service - Pass Through",
+      program: "msp-service",
+      severity: "info",
+    },
+  };
 
-    var options = {
-        hostname: process.env.LOGGER_HOST,
-        port: process.env.LOGGER_PORT,
-        path: '/log',
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Splunk ' + process.env.SPLUNK_AUTH_TOKEN,
-            'Content-Length': Buffer.byteLength(body),
-            'logsource': process.env.HOSTNAME,
-            'timestamp': moment().format('DD-MMM-YYYY'),
-            'method': 'MSP-Service - Pass Through',
-            'program': 'msp-service',
-            'severity': 'info'
-        }
-    };
-
-    var req = http.request(options, function (res) {
-        res.setEncoding('utf8');
-        res.on('data', function (chunk) {
-            console.log("Body chunk: " + JSON.stringify(chunk));
-        });
-        res.on('end', function () {
-            console.log('End of chunks');
-        });
+  var req = http.request(options, function (res) {
+    res.setEncoding("utf8");
+    res.on("data", function (chunk) {
+      console.log("Body chunk: " + JSON.stringify(chunk));
     });
-
-    req.on('error', function (e) {
-        console.error("error sending to splunk-forwarder: " + e.message);
+    res.on("end", function () {
+      console.log("End of chunks");
     });
+  });
 
-    // write data to request body
-    req.write(body);
-    req.end();
-}
+  req.on("error", function (e) {
+    console.error("error sending to splunk-forwarder: " + e.message);
+  });
+
+  // write data to request body
+  req.write(body);
+  req.end();
+};

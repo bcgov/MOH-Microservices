@@ -12,8 +12,8 @@ const generateDate = () => {
     hour: "numeric",
     minute: "numeric",
     second: "numeric",
-  })
-}
+  });
+};
 
 app.listen(MOCK_API_PORT, () => {
   console.log(`Mock api listening on port ${MOCK_API_PORT}`);
@@ -25,6 +25,10 @@ app.head("/", (req, res) => {
 });
 
 app.use("/", (req, res) => {
-  console.log("[MOCK-API] ", generateDate(), "-- Successfully received request, responded with 200");
+  console.log(
+    "[MOCK-API] ",
+    generateDate(),
+    "-- Successfully received request, responded with 200"
+  );
   res.status(responseCode).end();
 });

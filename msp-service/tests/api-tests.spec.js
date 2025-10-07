@@ -34,9 +34,6 @@ const startLocalServiceWith = async (command) => {
   });
 };
 
-
-
-
 describe("Service paths", () => {
   let mockLoggerPort;
   let mockApiPort;

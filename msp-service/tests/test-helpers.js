@@ -1,12 +1,11 @@
-import {exec} from "node:child_process"
+import { exec } from "node:child_process";
 
 export const startMockLogger = async (dynamicPort) => {
   //if a dynamic port is used, add it to the bash script as an env variable
   const dynamicPortEnv = !!dynamicPort ? `MOCK_LOGGER_PORT=${dynamicPort}` : "";
   const childProcess = await exec(
     `${dynamicPortEnv} timeout 5s node bin/mock-logger.js`,
-    (err, stdout, stderr) => {
-    }
+    (err, stdout, stderr) => {}
   );
 };
 
@@ -37,17 +36,13 @@ export const tryServer = async (website, HTTPMethod) => {
     }
   }
   return new Promise((resolve, reject) => {
-    reject(
-      `Couldn't reach ${website} (tried ${retryAttempts} times and gave up)`
-    );
+    reject(`Couldn't reach ${website} (tried ${retryAttempts} times and gave up)`);
   });
 };
 
 export const generateServiceCommand = (override) => {
   if ((override && typeof override !== "object") || Array.isArray(override)) {
-    throw new Error(
-      "The generateLogCommand() function needs to be passed an object!"
-    );
+    throw new Error("The generateLogCommand() function needs to be passed an object!");
   }
 
   const options = {
@@ -88,16 +83,12 @@ export const generatePortNumber = () => {
     const provisionalPort = Math.floor(Math.random() * (max - min + 1)) + min;
 
     if (usedPorts.includes(provisionalPort)) {
-      console.log(
-        `port number ${provisionalPort} already in use, regenerating...`
-      );
+      console.log(`port number ${provisionalPort} already in use, regenerating...`);
     } else {
       usedPorts.push(provisionalPort);
       return provisionalPort;
     }
   }
 
-  throw new Error(
-    "Couldn't generate a unique port number (tried 10 times and gave up)"
-  );
+  throw new Error("Couldn't generate a unique port number (tried 10 times and gave up)");
 };
