@@ -24,14 +24,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/bcgov/MOH-MSP-Enrolment.git"
+    "url": "git+https://github.com/bcgov/MOH-Microservices"
   },
   "author": "",
   "license": "Apache-2.0",
   "bugs": {
-    "url": "https://github.com/bcgov/msp-service/issues"
+    "url": "https://github.com/bcgov/MOH-Microservices/issues"
   },
-  "homepage": "https://github.com/bcgov/MOH-MSP-Enrolment#msp-service/readme",
+  "homepage": "https://github.com/bcgov/MOH-Microservices/blob/main/README.md",
   "dependencies": {
     "express": "^4.18.2",
     "http-proxy-middleware": "^3.0.5",
