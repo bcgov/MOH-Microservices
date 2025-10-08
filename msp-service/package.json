@@ -16,7 +16,11 @@
     "format": "prettier . --write",
     "test:coverage": "vitest run --coverage",
     "test:lint": "eslint .",
-    "test:schema": "echo \"WARNING: No schema specified\" && exit 0"
+    "test:schema": "echo \"WARNING: No schema specified\" && exit 0",
+    "prepare": "node bin/check-husky.mjs",
+    "pre-commit": "lint-staged",
+    "pre-commit:lint": "eslint",
+    "pre-commit:prettier": "prettier --check --ignore-unknown"
   },
   "repository": {
     "type": "git",
