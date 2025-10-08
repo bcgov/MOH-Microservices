@@ -15,7 +15,7 @@
     "lint": "eslint .",
     "format": "prettier . --write",
     "test:coverage": "vitest run --coverage",
-    "test:lint": "echo \"WARNING: No LINTer specified\" && exit 0",
+    "test:lint": "eslint .",
     "test:schema": "echo \"WARNING: No schema specified\" && exit 0"
   },
   "repository": {
