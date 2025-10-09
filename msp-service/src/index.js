@@ -177,7 +177,8 @@ app.use("/", function (req, res, next) {
     //if that property exists and is true, then the skip check is true
     //if that property doesn't exist, or if it does exist and is set to false, then set to false
     const skipUuid =
-      Object.prototype.hasOwnProperty.call(selectedOptions, "skipUuidCheck") && selectedOptions["skipUuidCheck"] === true
+      Object.prototype.hasOwnProperty.call(selectedOptions, "skipUuidCheck") &&
+      selectedOptions["skipUuidCheck"] === true
         ? true
         : false;
 
