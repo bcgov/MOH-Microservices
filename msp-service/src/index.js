@@ -4,9 +4,10 @@ import jwt from "jsonwebtoken";
 import stringify from "json-stringify-safe";
 import express from "express";
 import { createProxyMiddleware } from "http-proxy-middleware";
-
+import { rateLimit } from "express-rate-limit";
 import { winstonLogger, denyAccess, logSplunkError, logSplunkInfo } from "./helper.js";
 
+const RATE_LIMIT = process.env.RATE_LIMIT || 25;
 const SERVICE_PORT = process.env.PORT || 8080;
 
 //
@@ -58,29 +59,37 @@ try {
   throw Error(`NOUN_JSON is not valid JSON: ${process.env.NOUN_JSON}. Error: ${err}`);
 }
 
+const limiter = rateLimit({
+  windowMs: 5 * 1000, // 5 seconds
+  limit: RATE_LIMIT, // Limit each IP to 100 requests per `window` (here, per 5 seconds).
+  standardHeaders: "draft-8", // draft-6: `RateLimit-*` headers; draft-7 & draft-8: combined `RateLimit` header
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers.
+  // store: ... , // Redis, Memcached, etc. See below.
+});
+
 //
 // Init express
 //
 var app = express();
 
 // Add status endpoint
-app.get("/status", function (req, res) {
+app.get("/status", limiter, function (req, res) {
   res.send("OK");
 });
 
 // health and readiness check
-app.get("/hello", function (req, res) {
+app.get("/hello", limiter, function (req, res) {
   res.status(200).end();
 });
 
-app.get("/health", function (req, res) {
+app.get("/health", limiter, function (req, res) {
   res.status(200).end();
 });
 
 //
 // CAPTCHA Authorization, ALWAYS first
 //
-app.use("/", function (req, res, next) {
+app.use("/", limiter, function (req, res, next) {
   // Log it
   // logSplunkInfo("incoming: ", req.method, req.headers.host, req.url, res.statusCode, req.headers["x-authorization"]);
   logSplunkInfo("incoming: " + req.url);
