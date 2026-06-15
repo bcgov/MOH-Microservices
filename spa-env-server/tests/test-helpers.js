@@ -10,12 +10,12 @@ export const tryServer = async (website, HTTPMethod) => {
       await fetch(website, {
         method: HTTPMethod,
       });
-      console.log(`successfully reached ${website}!`);
+      // console.log(`successfully reached ${website}!`);
       return new Promise((resolve) => {
         resolve();
       });
     } catch (error) {
-      console.log(`failed to reach ${website}, attempt `, i);
+      // console.log(`failed to reach ${website}, attempt `, i);
       await new Promise((resolve) => setTimeout(resolve, 200));
     }
   }
