@@ -42,12 +42,13 @@ export const generateLogCommand = (override) => {
     SPA_ENV_ABCD_MAINTENANCE_FLAG: true,
     SPA_ENV_ABCD_MAINTENANCE_START: "2025-02-01 07:00:00 AM",
     SPA_ENV_ABCD_MAINTENANCE_END: "2025-02-01 11:00:00 PM",
+    SPA_ENV_ABCD_TIME_FORMAT: "YYYY-MM-DD h:mm:ss A",
     timeout: "5s",
   };
 
   Object.assign(options, override);
 
-  return `SERVICE_PORT=${options.SERVICE_PORT} SPA_ENV_ABCD_MAINTENANCE_FLAG=${options.SPA_ENV_ABCD_MAINTENANCE_FLAG} SPA_ENV_ABCD_MAINTENANCE_START='${options.SPA_ENV_ABCD_MAINTENANCE_START}' SPA_ENV_ABCD_MAINTENANCE_END='${options.SPA_ENV_ABCD_MAINTENANCE_END}' timeout ${options.timeout} node src/index.js server`;
+  return `SERVICE_PORT=${options.SERVICE_PORT} SPA_ENV_ABCD_MAINTENANCE_FLAG=${options.SPA_ENV_ABCD_MAINTENANCE_FLAG} SPA_ENV_ABCD_MAINTENANCE_START='${options.SPA_ENV_ABCD_MAINTENANCE_START}' SPA_ENV_ABCD_MAINTENANCE_END='${options.SPA_ENV_ABCD_MAINTENANCE_END}' SPA_ENV_ABCD_TIME_FORMAT='${options.SPA_ENV_ABCD_TIME_FORMAT}' timeout ${options.timeout} node src/index.js server`;
 };
 
 export const startLocalServiceWith = async (command) => {
