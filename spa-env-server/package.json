@@ -29,7 +29,6 @@
     "jsonwebtoken": "^9.0.0",
     "lodash": "^4.17.21",
     "moment-timezone": "^0.5.43",
-    "request": "^2.88.0",
     "serve-index": "^1.9.1",
     "winston": "^3.1.0",
     "winston-daily-rotate-file": "^3.3.3"
