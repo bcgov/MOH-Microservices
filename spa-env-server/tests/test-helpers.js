@@ -38,6 +38,8 @@ export const generateLogCommand = (override) => {
     );
   }
   const options = {
+    SERVICE_USE_AUTH: true,
+    SERVICE_AUTH_TOKEN: "",
     SERVICE_PORT: "8080",
     SPA_ENV_ABCD_MAINTENANCE_FLAG: true,
     SPA_ENV_ABCD_MAINTENANCE_START: "2025-02-01 07:00:00 AM",
@@ -48,7 +50,7 @@ export const generateLogCommand = (override) => {
 
   Object.assign(options, override);
 
-  return `SERVICE_PORT=${options.SERVICE_PORT} SPA_ENV_ABCD_MAINTENANCE_FLAG=${options.SPA_ENV_ABCD_MAINTENANCE_FLAG} SPA_ENV_ABCD_MAINTENANCE_START='${options.SPA_ENV_ABCD_MAINTENANCE_START}' SPA_ENV_ABCD_MAINTENANCE_END='${options.SPA_ENV_ABCD_MAINTENANCE_END}' SPA_ENV_ABCD_TIME_FORMAT='${options.SPA_ENV_ABCD_TIME_FORMAT}' timeout ${options.timeout} node src/index.js server`;
+  return `SERVICE_USE_AUTH=${options.SERVICE_USE_AUTH} SERVICE_AUTH_TOKEN=${options.SERVICE_AUTH_TOKEN} SERVICE_PORT=${options.SERVICE_PORT} SPA_ENV_ABCD_MAINTENANCE_FLAG=${options.SPA_ENV_ABCD_MAINTENANCE_FLAG} SPA_ENV_ABCD_MAINTENANCE_START='${options.SPA_ENV_ABCD_MAINTENANCE_START}' SPA_ENV_ABCD_MAINTENANCE_END='${options.SPA_ENV_ABCD_MAINTENANCE_END}' SPA_ENV_ABCD_TIME_FORMAT='${options.SPA_ENV_ABCD_TIME_FORMAT}' timeout ${options.timeout} node src/index.js server`;
 };
 
 export const startLocalServiceWith = async (command) => {
