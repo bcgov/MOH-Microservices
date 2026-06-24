@@ -20,7 +20,7 @@ describe("Start local servers, test APIs", async () => {
       SPA_ENV_ABCD_MAINTENANCE_END: placeholderEnd,
       SPA_ENV_ABCD_TIME_FORMAT: "YYYY-MM-DD h:mm:ss A"
     });
-    console.log("command: ", command);
+    // console.log("command: ", command);
     await startLocalServiceWith(command);
     await tryServer(localServiceUrl, "GET");
   }, 30000);
