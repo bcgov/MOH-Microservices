@@ -1,0 +1,8 @@
+export SERVICE_USE_AUTH="true"
+export SERVICE_AUTH_TOKEN="abcdefg"
+export SPA_ENV_ABCD_MAINTENANCE_FLAG=true
+export SPA_ENV_ABCD_MAINTENANCE_START="2025-02-01 07:00:00 AM"
+export SPA_ENV_ABCD_MAINTENANCE_END="2025-02-01 11:00:00 PM"
+export SPA_ENV_ABCD_TIME_FORMAT="YYYY-MM-DD h:mm:ss A"
+
+nodemon src/index.js server
