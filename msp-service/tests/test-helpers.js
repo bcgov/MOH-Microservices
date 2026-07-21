@@ -1,10 +1,50 @@
 import { exec } from "node:child_process";
+import * as jwt from "jsonwebtoken";
+
+export const testBody = { body: "xyz", logsource: "integration test request" };
+
+export const VALID_SECRET = "defaultSecret";
+export const INVALID_SECRET = "foobar";
+export const VALID_NOUN = "MSPDESubmitAttachment";
+export const VALID_UUID = "123e4567-e89b-12d3-a456-426655440000";
+
+export const validToken = jwt.sign(
+  {
+    data: {
+      nonce: `${VALID_UUID}`,
+    },
+  },
+  VALID_SECRET,
+  {
+    expiresIn: "30m",
+  }
+);
+
+//create child process to run the services for the duration of the tests
+//vitest doesn't always close child processes out when it finishes, so there's a timeout here to make extra sure they close
+export const startLocalService = async () => {
+  await exec(
+    "timeout 5s bin/start-local-msp-service.sh --test",
+    // eslint-disable-next-line no-unused-vars
+    (err, stdout, stderr) => {}
+  );
+};
+
+export const startLocalServiceWith = async (command) => {
+  // console.log("local server started with: ", command);
+  await exec(command, (err, stdout, stderr) => {
+    if (err || stderr) {
+      // console.log("service failed to start. error: ", err, stderr);
+      // console.log("output: ", stdout);
+    }
+  });
+};
 
 export const startMockLogger = async (dynamicPort) => {
   //if a dynamic port is used, add it to the bash script as an env variable
   const dynamicPortEnv = dynamicPort ? `MOCK_LOGGER_PORT=${dynamicPort}` : "";
   exec(
-    `${dynamicPortEnv} timeout 5s node bin/mock-logger.js`,
+    `${dynamicPortEnv} timeout 10s node bin/mock-logger.js`,
     // eslint-disable-next-line no-unused-vars
     (err, stdout, stderr) => {}
   );
@@ -13,7 +53,7 @@ export const startMockLogger = async (dynamicPort) => {
 export const startMockApi = async (dynamicPort) => {
   const dynamicPortEnv = dynamicPort ? `MOCK_API_PORT=${dynamicPort}` : "";
   exec(
-    `${dynamicPortEnv} timeout 5s node bin/mock-api.js`,
+    `${dynamicPortEnv} timeout 10s node bin/mock-api.js`,
     // eslint-disable-next-line no-unused-vars
     (err, stdout, stderr) => {}
   );
@@ -33,8 +73,8 @@ export const tryServer = async (website, HTTPMethod) => {
         resolve();
       });
     } catch (error) {
-      // console.log(`failed to reach ${website}, attempt `, i);
-      await new Promise((resolve) => setTimeout(resolve, 200));
+      // console.log(`failed to reach ${website}, attempt `, i, error);
+      await new Promise((resolve) => setTimeout(resolve, 300));
     }
   }
   return new Promise((resolve, reject) => {
@@ -88,6 +128,8 @@ export const generatePortNumber = () => {
       console.log(`port number ${provisionalPort} already in use, regenerating...`);
     } else {
       usedPorts.push(provisionalPort);
+      // console.log("provisional port: ", provisionalPort)
+      // console.log("everything used so far:", usedPorts)
       return provisionalPort;
     }
   }
