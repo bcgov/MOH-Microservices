@@ -42,11 +42,13 @@
     "winston": "^3.18.3"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@vitest/coverage-v8": "^4.1.10",
     "@vitest/eslint-plugin": "^1.6.23",
-    "eslint": "^9.37.0",
+    "eslint": "^10.7.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-compat": "^7.0.2",
+    "globals": "^17.7.0",
     "nodemon": "^3.1.14",
     "prettier": "^3.9.6",
     "vitest": "^4.1.10"
