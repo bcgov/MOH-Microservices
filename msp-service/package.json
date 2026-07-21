@@ -33,7 +33,7 @@
   },
   "homepage": "https://github.com/bcgov/MOH-Microservices/blob/main/README.md",
   "dependencies": {
-    "express": "^4.18.2",
+    "express": "^5.2.1",
     "express-rate-limit": "^8.6.0",
     "http-proxy-middleware": "^3.0.5",
     "json-stringify-safe": "^5.0.1",
