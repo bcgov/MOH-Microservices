@@ -3,6 +3,7 @@ import { defineConfig, configDefaults } from "vitest/config";
 export default defineConfig({
   test: {
     globals: true,
+    pool: "threads",
     exclude: [...configDefaults.exclude, "e2e/**"],
     coverage: {
       exclude: [

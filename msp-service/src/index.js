@@ -55,8 +55,10 @@ if (!process.env.NOUN_JSON) {
 try {
   // Try to parse NOUN_JSON
   JSON.parse(process.env.NOUN_JSON);
-} catch (err) {
-  throw Error(`NOUN_JSON is not valid JSON: ${process.env.NOUN_JSON}. Error: ${err}`);
+} catch (error) {
+  throw Error(`NOUN_JSON is not valid JSON: ${process.env.NOUN_JSON}`, {
+    cause: error,
+  });
 }
 
 const limiter = rateLimit({
@@ -120,7 +122,7 @@ app.use("/", limiter, function (req, res, next) {
     // Parse out the token
     var token = authHeaderValue.replace("Bearer ", "");
 
-    var decoded = null;
+    var decoded;
     try {
       // Decode token
       decoded = jwt.verify(token, process.env.AUTH_TOKEN_KEY);

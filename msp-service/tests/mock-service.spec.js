@@ -1,22 +1,9 @@
-import { tryServer, startMockLogger, startMockApi } from "./test-helpers.js";
-
-import { exec } from "node:child_process";
+import { tryServer, startMockLogger, startMockApi, startLocalService } from "./test-helpers.js";
 
 //these need to match the values in start-local-service.sh
 const mockLoggerUrl = "http://localhost:3000";
 const mockApiUrl = "http://localhost:3001";
 const localServiceUrl = "http://localhost:8080";
-
-//create child process to run the services for the duration of the tests
-//vitest doesn't always close child processes out when it finishes, so there's a timeout here to make extra sure they close
-
-const startLocalService = async () => {
-  await exec(
-    "timeout 5s bin/start-local-msp-service.sh --test",
-    // eslint-disable-next-line no-unused-vars
-    (err, stdout, stderr) => {}
-  );
-};
 
 describe("Mock service boot-up in local environment", () => {
   beforeAll(async () => {

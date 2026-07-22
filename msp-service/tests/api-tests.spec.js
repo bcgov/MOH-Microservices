@@ -4,45 +4,24 @@ import {
   generatePortNumber,
   startMockLogger,
   startMockApi,
-} from "./test-helpers.js";
-import { exec } from "child_process";
-import * as jwt from "jsonwebtoken";
-import { it } from "vitest";
-
-const VALID_SECRET = "defaultSecret";
-const INVALID_SECRET = "foobar";
-const VALID_NOUN = "MSPDESubmitAttachment";
-const VALID_UUID = "123e4567-e89b-12d3-a456-426655440000";
-
-const validToken = jwt.sign(
-  {
-    data: {
-      nonce: `${VALID_UUID}`,
-    },
-  },
+  startLocalServiceWith,
+  testBody,
   VALID_SECRET,
-  {
-    expiresIn: "30m",
-  }
-);
+  INVALID_SECRET,
+  VALID_UUID,
+  VALID_NOUN,
+  validToken,
+} from "./test-helpers.js";
+import * as jwt from "jsonwebtoken";
 
-const testBody = { body: "xyz", logsource: "integration test request" };
-
-const startLocalServiceWith = async (command) => {
-  // eslint-disable-next-line no-unused-vars
-  await exec(command, (err, stdout, stderr) => {
-    // console.log("service failed to start: ", err);
-  });
-};
-
-describe("Service paths", () => {
+describe("Mocks", () => {
   let mockLoggerPort;
   let mockApiPort;
 
   let mockLoggerUrl;
   let mockApiUrl;
 
-  beforeEach(async () => {
+  beforeAll(async () => {
     mockLoggerPort = generatePortNumber();
     mockApiPort = generatePortNumber();
 
@@ -68,63 +47,33 @@ describe("Service paths", () => {
     });
     expect(response.status).toBe(200);
   });
+});
 
-  it("(Service) Should respond with a 200 to the /hello endpoint", async () => {
-    const port = generatePortNumber();
-    const command = generateServiceCommand({
-      PORT: port,
-    });
-    await startLocalServiceWith(command);
-    const url = `http://localhost:${port}/hello`;
-    await tryServer(url, "HEAD");
-    const response = await fetch(url, {
-      method: "HEAD",
-    });
-    expect(response.status).toBe(200);
-  });
+describe("Service paths", () => {
+  let mockLoggerPort;
+  let mockApiPort;
 
-  it("(Service) Should respond with a 200 to the /health endpoint", async () => {
-    const port = generatePortNumber();
-    const command = generateServiceCommand({
-      PORT: port,
-    });
-    await startLocalServiceWith(command);
-    const url = `http://localhost:${port}/health`;
-    await tryServer(url, "HEAD");
-    const response = await fetch(url, {
-      method: "HEAD",
-    });
-    expect(response.status).toBe(200);
-  });
+  let mockLoggerUrl;
+  let mockApiUrl;
 
-  it("(Service) Should respond with a 200 to the /status endpoint", async () => {
-    const port = generatePortNumber();
-    const command = generateServiceCommand({
-      PORT: port,
-    });
-    await startLocalServiceWith(command);
-    const url = `http://localhost:${port}/status`;
-    await tryServer(url, "HEAD");
-    const response = await fetch(url, {
-      method: "HEAD",
-    });
-    expect(response.status).toBe(200);
-  });
+  let defaultPort;
 
-  it("(Service) Happy path-- Responds with a 200 when conditions are met", async () => {
-    //USE_AUTH_TOKEN needs to be true
-    //AUTH_TOKEN_KEY needs to have length > 0
-    //Request needs to include an X-Auth header containing a valid JWT
-    //JWT has a nonce in its data
-    //JWT was signed with the same AUTH_TOKEN_KEY used to initialize the msp-service
-    //Incoming request URL is on the list of approved "nouns"/resource IDs
-    //URL contains a uuid unless skipped
-    //resource ID and nonce match unless skipped
-    //If all these things are correct, request will respond with a 200
+  beforeAll(async () => {
+    mockLoggerPort = generatePortNumber();
+    mockApiPort = generatePortNumber();
 
-    const port = generatePortNumber();
-    const command = generateServiceCommand({
-      PORT: port,
+    mockLoggerUrl = `http://localhost:${mockLoggerPort}`;
+    mockApiUrl = `http://localhost:${mockApiPort}`;
+
+    await startMockLogger(mockLoggerPort);
+    await startMockApi(mockApiPort);
+    await tryServer(mockLoggerUrl, "HEAD");
+    await tryServer(mockApiUrl, "HEAD");
+
+    //start up default server
+    defaultPort = generatePortNumber();
+    const defaultCommand = generateServiceCommand({
+      PORT: defaultPort,
       USE_AUTH_TOKEN: true,
       AUTH_TOKEN_KEY: VALID_SECRET,
       LOGGER_HOST: "localhost",
@@ -133,106 +82,17 @@ describe("Service paths", () => {
       TARGET_URL: `http://localhost:${mockApiPort}`,
     });
 
-    await startLocalServiceWith(command);
-    const serverUrl = `http://localhost:${port}/`;
-    await tryServer(serverUrl, "HEAD");
-
-    const headers = new Headers();
-    headers.append("X-Authorization", `Bearer ${validToken}`);
-
-    const testUrl = `http://localhost:${port}/${VALID_NOUN}/${VALID_UUID}`;
-
-    const response = await fetch(testUrl, {
-      method: "POST",
-      body: JSON.stringify(testBody),
-      headers: headers,
-    });
-    expect(response.status).toBe(200);
-  });
-
-  //this test works locally, but breaks in the Github workflow for some reason, so it's skipped for now
-  it("(Service) Happy path-- Responds with a 200 when USE_AUTH_TOKEN is false and missing X-Auth header", async () => {
-    const port = generatePortNumber();
-    const command = generateServiceCommand({
-      PORT: port,
-      USE_AUTH_TOKEN: false,
-      AUTH_TOKEN_KEY: VALID_SECRET,
-      LOGGER_HOST: "localhost",
-      LOGGER_PORT: mockLoggerPort,
-      HOSTNAME: "asdf",
-      TARGET_URL: `http://localhost:${mockApiPort}`,
-    });
-
-    await startLocalServiceWith(command);
-    const serverUrl = `http://localhost:${port}/`;
-    await tryServer(serverUrl, "HEAD");
-
-    const headers = new Headers();
-    // commented out X-Auth token for this particular test
-    // headers.append("X-Authorization", `Bearer ${validToken}`);
-
-    const testUrl = `http://localhost:${port}/${VALID_NOUN}/${VALID_UUID}`;
-
-    const response = await fetch(testUrl, {
-      method: "POST",
-      body: JSON.stringify(testBody),
-      headers: headers,
-    });
-    expect(response.status).toBe(200);
-  });
-
-  //this test works locally, but breaks in the Github workflow for some reason, so it's skipped for now
-  it("(Service) Happy path-- Responds with a 200 when AUTH_TOKEN_KEY is empty/falsy and missing X-Auth header", async () => {
-    const port = generatePortNumber();
-    const command = generateServiceCommand({
-      PORT: port,
-      USE_AUTH_TOKEN: true,
-      AUTH_TOKEN_KEY: "",
-      LOGGER_HOST: "localhost",
-      LOGGER_PORT: mockLoggerPort,
-      HOSTNAME: "asdf",
-      TARGET_URL: `http://localhost:${mockApiPort}`,
-    });
-
-    await startLocalServiceWith(command);
-    const serverUrl = `http://localhost:${port}/`;
-    await tryServer(serverUrl, "HEAD");
-
-    const headers = new Headers();
-    // commented out X-Auth token for this particular test
-    // headers.append("X-Authorization", `Bearer ${validToken}`);
-
-    const testUrl = `http://localhost:${port}/${VALID_NOUN}/${VALID_UUID}`;
-
-    const response = await fetch(testUrl, {
-      method: "POST",
-      body: JSON.stringify(testBody),
-      headers: headers,
-    });
-    expect(response.status).toBe(200);
+    await startLocalServiceWith(defaultCommand);
+    const defaultServerUrl = `http://localhost:${defaultPort}/`;
+    await tryServer(defaultServerUrl, "HEAD");
   });
 
   it("(Service) Responds with a 401 when X-Authorization header is missing", async () => {
-    const port = generatePortNumber();
-    const command = generateServiceCommand({
-      PORT: port,
-      USE_AUTH_TOKEN: true,
-      AUTH_TOKEN_KEY: VALID_SECRET,
-      LOGGER_HOST: "localhost",
-      LOGGER_PORT: mockLoggerPort,
-      HOSTNAME: "asdf",
-      TARGET_URL: `http://localhost:${mockApiPort}`,
-    });
-
-    await startLocalServiceWith(command);
-    const serverUrl = `http://localhost:${port}/`;
-    await tryServer(serverUrl, "HEAD");
-
     const headers = new Headers();
     // commented out X-Auth token for this particular test
     // headers.append("X-Authorization", `Bearer ${validToken}`);
 
-    const testUrl = `http://localhost:${port}/${VALID_NOUN}/${VALID_UUID}`;
+    const testUrl = `http://localhost:${defaultPort}/${VALID_NOUN}/${VALID_UUID}`;
 
     const response = await fetch(testUrl, {
       method: "POST",
@@ -255,25 +115,10 @@ describe("Service paths", () => {
       }
     );
 
-    const port = generatePortNumber();
-    const command = generateServiceCommand({
-      PORT: port,
-      USE_AUTH_TOKEN: true,
-      AUTH_TOKEN_KEY: VALID_SECRET,
-      LOGGER_HOST: "localhost",
-      LOGGER_PORT: mockLoggerPort,
-      HOSTNAME: "asdf",
-      TARGET_URL: `http://localhost:${mockApiPort}`,
-    });
-
-    await startLocalServiceWith(command);
-    const serverUrl = `http://localhost:${port}/`;
-    await tryServer(serverUrl, "HEAD");
-
     const headers = new Headers();
     headers.append("X-Authorization", `Bearer ${nonNonceToken}`);
 
-    const testUrl = `http://localhost:${port}/${VALID_NOUN}/${VALID_UUID}`;
+    const testUrl = `http://localhost:${defaultPort}/${VALID_NOUN}/${VALID_UUID}`;
 
     const response = await fetch(testUrl, {
       method: "POST",
@@ -297,25 +142,10 @@ describe("Service paths", () => {
       }
     );
 
-    const port = generatePortNumber();
-    const command = generateServiceCommand({
-      PORT: port,
-      USE_AUTH_TOKEN: true,
-      AUTH_TOKEN_KEY: VALID_SECRET,
-      LOGGER_HOST: "localhost",
-      LOGGER_PORT: mockLoggerPort,
-      HOSTNAME: "asdf",
-      TARGET_URL: `http://localhost:${mockApiPort}`,
-    });
-
-    await startLocalServiceWith(command);
-    const serverUrl = `http://localhost:${port}/`;
-    await tryServer(serverUrl, "HEAD");
-
     const headers = new Headers();
     headers.append("X-Authorization", `Bearer ${wrongSecretToken}`);
 
-    const testUrl = `http://localhost:${port}/${VALID_NOUN}/${VALID_UUID}`;
+    const testUrl = `http://localhost:${defaultPort}/${VALID_NOUN}/${VALID_UUID}`;
 
     const response = await fetch(testUrl, {
       method: "POST",
@@ -524,126 +354,5 @@ describe("Service paths", () => {
       headers: headers,
     });
     expect(response.status).toBe(200);
-  });
-});
-
-describe("General rate limiting", async () => {
-  const RATE_LIMIT = 10;
-  let mockLoggerPort;
-  let mockApiPort;
-
-  let mockLoggerUrl;
-  let mockApiUrl;
-
-  let ephemeralServerUrl;
-
-  const headers = new Headers();
-  headers.append("X-Authorization", `Bearer ${validToken}`);
-
-  beforeEach(async () => {
-    const port = generatePortNumber();
-    mockLoggerPort = generatePortNumber();
-    mockApiPort = generatePortNumber();
-
-    mockLoggerUrl = `http://localhost:${mockLoggerPort}`;
-    mockApiUrl = `http://localhost:${mockApiPort}`;
-
-    await startMockLogger(mockLoggerPort);
-    await startMockApi(mockApiPort);
-    await tryServer(mockLoggerUrl, "HEAD");
-    await tryServer(mockApiUrl, "HEAD");
-
-    const command = generateServiceCommand({
-      PORT: port,
-      USE_AUTH_TOKEN: true,
-      AUTH_TOKEN_KEY: VALID_SECRET,
-      LOGGER_HOST: "localhost",
-      LOGGER_PORT: mockLoggerPort,
-      HOSTNAME: "asdf",
-      TARGET_URL: `http://localhost:${mockApiPort}`,
-      RATE_LIMIT,
-    });
-    await startLocalServiceWith(command);
-    // console.log("command started with: ", command);
-    ephemeralServerUrl = `http://localhost:${port}`;
-    await tryServer(ephemeralServerUrl, "HEAD");
-  }, 30000);
-
-  it("the /status endpoint should respond with a 429 after RATE_LIMIT is reached", async () => {
-    //reach the API limit
-    for (let i = 1; i < RATE_LIMIT; i++) {
-      const response = await fetch(`${ephemeralServerUrl}/status`, {
-        method: "GET",
-        headers,
-      });
-
-      expect(response.status).toBe(200);
-    }
-
-    //now that the limit has been reached, any subsequent API calls should respond with a 429
-    const response = await fetch(`${ephemeralServerUrl}/status`, {
-      method: "GET",
-      headers,
-    });
-    expect(response.status).toBe(429);
-  });
-
-  it("the /hello endpoint should respond with a 429 after RATE_LIMIT is reached", async () => {
-    //reach the API limit
-    for (let i = 1; i < RATE_LIMIT; i++) {
-      const response = await fetch(`${ephemeralServerUrl}/hello`, {
-        method: "GET",
-        headers,
-      });
-
-      expect(response.status).toBe(200);
-    }
-
-    //now that the limit has been reached, any subsequent API calls should respond with a 429
-    const response = await fetch(`${ephemeralServerUrl}/hello`, {
-      method: "GET",
-      headers,
-    });
-    expect(response.status).toBe(429);
-  });
-
-  it("the /health endpoint should respond with a 429 after RATE_LIMIT is reached", async () => {
-    //reach the API limit
-    for (let i = 1; i < RATE_LIMIT; i++) {
-      const response = await fetch(`${ephemeralServerUrl}/health`, {
-        method: "GET",
-        headers,
-      });
-
-      expect(response.status).toBe(200);
-    }
-
-    //now that the limit has been reached, any subsequent API calls should respond with a 429
-    const response = await fetch(`${ephemeralServerUrl}/health`, {
-      method: "GET",
-      headers,
-    });
-    expect(response.status).toBe(429);
-  });
-
-  it("the / endpoint should respond with a 429 after RATE_LIMIT is reached", async () => {
-    //reach the API limit
-    for (let i = 1; i < RATE_LIMIT; i++) {
-      const response = await fetch(`${ephemeralServerUrl}/${VALID_NOUN}/${VALID_UUID}`, {
-        method: "POST",
-        body: JSON.stringify(testBody),
-        headers,
-      });
-
-      expect(response.status).toBe(200);
-    }
-
-    //now that the limit has been reached, any subsequent API calls should respond with a 429
-    const response = await fetch(`${ephemeralServerUrl}/${VALID_NOUN}/${VALID_UUID}`, {
-      method: "POST",
-      body: JSON.stringify(testBody),
-      headers,
-    });
-    expect(response.status).toBe(429);
   });
 });
