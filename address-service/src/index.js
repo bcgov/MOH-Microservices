@@ -16,6 +16,7 @@ const HOST_NAME = process.env.HOSTNAME || '?';
 const USE_AUDIT_LOGS = (process.env.USE_AUDIT_LOGS == 'true');
 const MAX_FILES = parseInt(process.env.MAX_FILES, 10) || 10;
 const MAX_BYTE_SIZE_PER_FILE = parseInt(process.env.MAX_BYTE_SIZE_PER_FILE, 10) || (1024 * 1024 * 75)
+const PORT = process.env.PORT || '8080';
 
 var transport = null;
 
@@ -247,8 +248,8 @@ app.get('/zip', function (req, res) {
 });
 
 // Start express
-app.listen(8080);
-console.log("Listening on port 8080");
+app.listen(PORT);
+console.log(`Listening on port ${PORT}`);
 // console.log("Cert: " + clientCert.slice(0, 100));
 // console.log("Key: " + clientKey.slice(0, 100));
 
