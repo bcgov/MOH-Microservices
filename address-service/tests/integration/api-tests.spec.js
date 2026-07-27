@@ -8,12 +8,35 @@ import {
 } from "../test-helpers.js";
 import { testXML } from "../../bin/testXML.js"
 
-describe("Mock Service-- status, health checks", async () => {
+describe("Mock Service smoke test", async () => {
   const mockServiceUrl = "http://localhost:8080";
 
   beforeAll(async () => {
     const command = generateServiceCommand({
-      ADDRESS_VALIDATOR_URL: "",
+      ADDRESS_VALIDATOR_URL: "fake-endpoint.com",
+      PORT: 8080,
+    });
+    await startLocalServiceWith(command);
+    await tryServer(mockServiceUrl, "HEAD");
+  }, 30000);
+
+  it("Should respond with a 200 to the / endpoint", async () => {
+    const response = await fetch(`${mockServiceUrl}`, {
+      method: "HEAD",
+    });
+    expect(response.status).toBe(200);
+  });
+});
+
+describe("Status, health checks", async () => {
+  const port = generatePortNumber();
+  const mockServiceUrl = `http://localhost:${port}`;
+
+  beforeAll(async () => {
+    const command = generateServiceCommand({
+      ADDRESS_VALIDATOR_URL: "fake-endpoint.com", //doesn't matter for these tests
+      PORT: port,
+      timeout: "10s",
     });
     await startLocalServiceWith(command);
     await tryServer(mockServiceUrl, "HEAD");
@@ -39,6 +62,21 @@ describe("Mock Service-- status, health checks", async () => {
     });
     expect(response.status).toBe(200);
   });
+});
+
+describe("/ip endpoint", async () => {
+  const port = generatePortNumber();
+  const mockServiceUrl = `http://localhost:${port}`;
+
+  beforeAll(async () => {
+    const command = generateServiceCommand({
+      ADDRESS_VALIDATOR_URL: "fake-endpoint.com", //doesn't matter for these tests
+      PORT: port,
+      timeout: "10s",
+    });
+    await startLocalServiceWith(command);
+    await tryServer(mockServiceUrl, "HEAD");
+  }, 30000);
 
   it("Should respond with a 200 to the /ip endpoint", async () => {
     await fetch(`${mockServiceUrl}/ip`, {

@@ -53,7 +53,7 @@ export const generateServiceCommand = (override) => {
   }
 
   const options = {
-    ADDRESS_VALIDATOR_URL: "",
+    ADDRESS_VALIDATOR_URL: "fake-endpoint.com",
     PORT: "8080",
     timeout: "5s",
   };
