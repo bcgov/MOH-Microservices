@@ -7,9 +7,13 @@
     "build": "NODE_ENV=production gulp",
     "start": "node $NODE_DEBUG_OPTION build/index.js server",
     "dev": "nodemon --watch src --inspect=0.0.0.0:9229 --exec node ./src/index.js server",
+    "test": "vitest run",
     "test:coverage": "echo \"WARNING: No test specified\" && exit 0",
     "test:lint": "echo \"WARNING: No LINTer specified\" && exit 0",
-    "test:schema": "echo \"WARNING: No schema specified\" && exit 0"
+    "test:schema": "echo \"WARNING: No schema specified\" && exit 0",
+    "send-test-request": "bin/send-test-request.sh",
+    "start-local-service": "bin/start-local-service.sh",
+    "start-mock-api": "nodemon bin/mock-api.js"
   },
   "repository": {
     "type": "git",
@@ -35,7 +39,8 @@
     "gulp-clean": "^0.4.0",
     "gulp-sourcemaps": "^2.6.5",
     "gulp-typescript": "^6.0.0-alpha.1",
-    "nodemon": "^2.0.22"
+    "nodemon": "^2.0.22",
+    "vitest": "^4.1.10"
   },
   "engines": {
     "node": ">=10.0.0"
