@@ -36,7 +36,7 @@ export const startMockApi = async (dynamicPort) => {
 };
 
 export const startLocalServiceWith = async (command) => {
-  console.log("local server started with: ", command);
+  // console.log("local server started with: ", command);
   await exec(command, (err, stdout, stderr) => {
     if (err || stderr) {
       // console.log("service failed to start. error: ", err, stderr);
