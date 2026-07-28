@@ -188,7 +188,6 @@ describe("/address-raw endpoint", async () => {
         return response.json();
       })
       .then(function (data) {
-        console.log("raw data log: ", data)
         expect(data).toEqual(jsonFormattedResponseRaw);
       });
   });
