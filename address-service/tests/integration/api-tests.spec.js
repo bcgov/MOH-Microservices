@@ -4,8 +4,11 @@ import {
   generatePortNumber,
   startLocalServiceWith,
   startMockApi,
-  jsonFormattedResponse,
 } from "../test-helpers.js";
+import {
+  jsonFormattedResponse,
+  jsonFormattedResponseRaw
+} from "../test-constants.js";
 import { testXML } from "../../bin/testXML.js"
 
 describe("Mock Service smoke test", async () => {
@@ -153,6 +156,40 @@ describe("/address endpoint", async () => {
       })
       .then(function (data) {
         expect(data).toEqual(jsonFormattedResponse);
+      });
+  });
+});
+
+describe("/address-raw endpoint", async () => {
+  let mockApiPort;
+  let mockApiUrl;
+  beforeAll(async () => {
+    mockApiPort = generatePortNumber();
+    mockApiUrl = `http://localhost:${mockApiPort}`;
+    await startMockApi(mockApiPort);
+    await tryServer(mockApiUrl, "HEAD");
+  });
+  it("Should respond with a 200 to the /address-raw endpoint and respond with JSON formatted address data", async () => {
+    const port = generatePortNumber();
+    const command = generateServiceCommand({
+      ADDRESS_VALIDATOR_URL: mockApiUrl,
+      PORT: port,
+    });
+
+    const serverUrl = `http://localhost:${port}`;
+
+    await startLocalServiceWith(command);
+    await tryServer(serverUrl, "HEAD");
+    await fetch(`${serverUrl}/address-raw`, {
+      method: "GET",
+    })
+      .then(function (response) {
+        expect(response.status).toBe(200);
+        return response.json();
+      })
+      .then(function (data) {
+        console.log("raw data log: ", data)
+        expect(data).toEqual(jsonFormattedResponseRaw);
       });
   });
 });
