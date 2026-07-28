@@ -193,3 +193,5 @@ describe("/address-raw endpoint", async () => {
       });
   });
 });
+
+// /zip is not used in any DE application, so it was skipped
