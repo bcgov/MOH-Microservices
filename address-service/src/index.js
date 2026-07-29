@@ -96,7 +96,7 @@ app.get('/address', function (req, res) {
                     .replace("{country}", "Canada");
 
     const agent = new https.Agent({
-        rejectUnauthorized: false,
+        rejectUnauthorized: true,
         cert: clientCert,
         key: clientKey,
     });

@@ -39,7 +39,7 @@ const xml = `<soapenv:Envelope
 </soapenv:Envelope>`;
 
 const agent = new https.Agent({
-  rejectUnauthorized: false,
+  rejectUnauthorized: true,
   cert: clientCert,
   key: clientKey,
 });
