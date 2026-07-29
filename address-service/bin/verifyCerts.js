@@ -19,7 +19,7 @@ const address = "111%20Fake"; //or any other address you like
 
 const xml = `<soapenv:Envelope 
         xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
-        xmlns:v4="http://xml-namespace.fake">
+        xmlns:v4="http://validator5.AddressDoctor.com/Webservice5/v4">
    <soapenv:Header/>
    <soapenv:Body>
       <v4:Process>
