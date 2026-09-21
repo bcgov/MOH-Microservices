@@ -13,6 +13,7 @@
     "test:schema": "echo \"WARNING: No schema specified\" && exit 0",
     "lint": "eslint .",
     "format": "prettier . --write",
+    "prepare": "node bin/check-husky.mjs",
     "pre-commit": "lint-staged",
     "pre-commit:lint": "eslint",
     "pre-commit:prettier": "prettier --check --ignore-unknown",
