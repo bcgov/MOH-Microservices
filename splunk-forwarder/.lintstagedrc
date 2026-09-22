@@ -1,4 +1,4 @@
 {
-  "*.{js,ts,jsx,tsx,vue,cjs}": ["npm run pre-commit:lint"],
+  "*.{js,ts,jsx,tsx,vue,cjs,mjs}": ["npm run pre-commit:lint"],
   "*": ["npm run pre-commit:prettier"]
 }
