@@ -17,8 +17,12 @@
     "dev": "nodemon --watch src --inspect=0.0.0.0:9229 --exec node ./src/index.js server",
     "test": "vitest run -- --no-threads",
     "test:coverage": "vitest run --coverage",
-    "test:lint": "echo \"WARNING: No LINTer specified\" && exit 0",
-    "test:schema": "echo \"WARNING: No schema specified\" && exit 0"
+    "test:lint": "echo \"WARNING: No LINTer specified\"",
+    "test:schema": "echo \"WARNING: No schema specified\"",
+    "prepare": "node bin/check-husky.mjs",
+    "pre-commit": "lint-staged",
+    "pre-commit:lint": "echo \"WARNING: No LINTer specified\"",
+    "pre-commit:prettier": "echo \"WARNING: No formatter specified\""
   },
   "dependencies": {
     "body-parser": "^1.20.2",

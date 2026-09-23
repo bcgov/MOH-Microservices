@@ -10,7 +10,7 @@ exec(command, (error, stdout, stderr) => {
   console.log("(check-husky.mjs) check-husky results: ", stdout);
   if (error || stderr) {
     console.error(
-      `(check-husky.mjs) Husky install execution error: ${error && error.message ? error.message : stderr}`
+      `(check-husky.mjs) Husky install execution error: ${error && error.message ? error.message : stderr}`,
     );
     process.exit(1);
   }
