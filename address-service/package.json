@@ -8,16 +8,16 @@
     "start": "node $NODE_DEBUG_OPTION src/index.js server",
     "dev": "nodemon --watch src --inspect=0.0.0.0:9229 --exec node ./src/index.js server",
     "test": "vitest run",
-    "test:coverage": "echo \"WARNING: No test specified\" && exit 0",
-    "test:lint": "echo \"WARNING: No LINTer specified\" && exit 0",
-    "test:schema": "echo \"WARNING: No schema specified\" && exit 0",
+    "test:coverage": "echo \"WARNING: No test specified\"",
+    "test:lint": "echo \"WARNING: No LINTer specified\"",
+    "test:schema": "echo \"WARNING: No schema specified\"",
     "send-test-request": "bin/send-test-request.sh",
     "start-local-service": "bin/start-local-service.sh",
     "start-mock-api": "nodemon bin/mock-api.js",
     "prepare": "node bin/check-husky.mjs",
     "pre-commit": "lint-staged",
-    "pre-commit:lint": "echo \"WARNING: No LINTer specified\" && exit 0",
-    "pre-commit:prettier": "echo \"WARNING: No formatter specified\" && exit 0"
+    "pre-commit:lint": "echo \"WARNING: No LINTer specified\"",
+    "pre-commit:prettier": "echo \"WARNING: No formatter specified\""
   },
   "repository": {
     "type": "git",
