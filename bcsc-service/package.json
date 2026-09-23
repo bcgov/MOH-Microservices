@@ -8,12 +8,12 @@
     "start": "node ./src/index.js",
     "dev": "npx nodemon --watch src --watch .env --exec node ./src/index.js server",
     "test:coverage": "jest --coverage",
-    "test:lint": "echo \"WARNING: No LINTer specified\" && exit 0",
-    "test:schema": "echo \"WARNING: No schema specified\" && exit 0",
+    "test:lint": "echo \"WARNING: No LINTer specified\"",
+    "test:schema": "echo \"WARNING: No schema specified\"",
     "prepare": "node bin/check-husky.mjs",
     "pre-commit": "lint-staged",
-    "pre-commit:lint": "echo \"WARNING: No LINTer specified\" && exit 0",
-    "pre-commit:prettier": "echo \"WARNING: No formatter specified\" && exit 0"
+    "pre-commit:lint": "echo \"WARNING: No LINTer specified\"",
+    "pre-commit:prettier": "echo \"WARNING: No formatter specified\""
   },
   "author": "",
   "license": "ISC",
